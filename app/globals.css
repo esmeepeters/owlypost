@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+:root {
+  /* The single accent color used across the UI; change it here to retheme. */
+  --accent: #b45309;
+}
+
+@theme inline {
+  --color-accent: var(--accent);
+}
+
+body {
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+}

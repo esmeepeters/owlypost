@@ -1,0 +1,46 @@
+{
+  "name": "owly-post",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "packageManager": "pnpm@11.6.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"lib/**/*.test.ts\"",
+    "migrate": "node --env-file=.env scripts/migrate.ts",
+    "seed": "node --env-file=.env scripts/seed.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
+    "@extractus/article-extractor": "^8.1.0",
+    "date-fns": "^4.4.0",
+    "date-fns-tz": "^3.2.0",
+    "next": "15.5.19",
+    "node-cron": "^4.5.0",
+    "pg": "^8.22.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "resend": "^6.12.4",
+    "rss-parser": "^3.13.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4.3.1",
+    "@types/node": "^22.15.0",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "15.5.19",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^5.9.0"
+  }
+}
