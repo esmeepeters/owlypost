@@ -1,0 +1,70 @@
+# Owly Post — self-hosted stack: app + worker/scheduler + Postgres.
+#
+# Copy .env.example to .env and fill it in first. Prefer an external Postgres by
+# pointing DATABASE_URL at it and removing the postgres service + the DATABASE_URL
+# overrides below.
+#
+#   docker compose up -d --build
+
+x-app-env: &app-env
+  NODE_ENV: production
+  # Reach the bundled Postgres over the compose network (overrides the host
+  # value in .env). Point DATABASE_URL in .env at an external database and drop
+  # this to use that instead.
+  DATABASE_URL: postgres://${POSTGRES_USER:-owly}:${POSTGRES_PASSWORD:-owly}@postgres:5432/${POSTGRES_DB:-owly}
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-owly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-owly}
+      POSTGRES_DB: ${POSTGRES_DB:-owly}
+    ports:
+      # For host access (e.g. `pnpm migrate` / `pnpm seed` from the host).
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-owly} -d ${POSTGRES_DB:-owly}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: applies pending migrations, then exits. App and worker wait for it.
+  migrate:
+    build: .
+    image: owlypost:local
+    command: ["node", "scripts/migrate.ts"]
+    env_file: .env
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    image: owlypost:local
+    restart: unless-stopped
+    env_file: .env
+    environment: *app-env
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    image: owlypost:local
+    restart: unless-stopped
+    command: ["node", "scripts/worker.ts"]
+    env_file: .env
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:

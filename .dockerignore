@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+.netlify
+.claude
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+Dockerfile
+.dockerignore
+docker-compose.yml
+docs
+deno.lock
