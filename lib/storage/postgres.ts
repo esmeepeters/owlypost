@@ -291,6 +291,15 @@ export class PostgresStorage implements Storage {
     );
   }
 
+  async clearItemSummariesSince(iso: string): Promise<number> {
+    const result = await this.#pool.query(
+      `update items set summary = null, topics = null
+        where fetched_at >= $1 and summary is not null`,
+      [iso],
+    );
+    return result.rowCount ?? 0;
+  }
+
   async countItemsSince(iso: string): Promise<number> {
     const { rows } = await this.#pool.query<{ n: number }>(
       `select count(*)::int as n from items where fetched_at >= $1`,

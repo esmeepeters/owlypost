@@ -13,7 +13,7 @@ const EXTRACT_TIMEOUT_MS = 8_000;
 const EXTRACT_THRESHOLD_CHARS = 500;
 const MAX_CONTENT_CHARS = 20_000;
 const SUMMARY_CAP_PER_RUN = 100;
-const SUMMARY_INPUT_CHARS = 4_000;
+const SUMMARY_INPUT_CHARS = 12_000;
 const FAILURES_BEFORE_ERROR = 5;
 
 export type IngestStats = {
@@ -235,7 +235,7 @@ export async function summarizePendingItems(
   for (const item of pending) {
     try {
       const prompt = [
-        `Summarize this article in exactly two sentences, written in the language "${language}", and list at most 3 short topic tags (in ${language === "en" ? "English" : `"${language}"`} or English, lowercase).`,
+        `Summarize this article in 4 to 7 sentences, written in the language "${language}", covering the key facts, figures, and conclusions so a reader gets the full picture without opening the article. Also list at most 3 short topic tags (in ${language === "en" ? "English" : `"${language}"`} or English, lowercase).`,
         "",
         `Title: ${item.title}`,
         `Content: ${(item.content_text ?? "").slice(0, SUMMARY_INPUT_CHARS)}`,
@@ -247,7 +247,7 @@ export async function summarizePendingItems(
         client,
         model,
         prompt,
-        maxTokens: 300,
+        maxTokens: 800,
         schema: summarySchema,
       });
 

@@ -12,12 +12,12 @@ import { synthesizeProfile } from "./profile.ts";
 import type { Storage } from "./storage/index.ts";
 import type { WeekItem as DigestItemInput } from "./storage/types.ts";
 
-const ITEM_CAP = 150;
-const ITEM_RECORD_MAX_CHARS = 600;
+const ITEM_CAP = 300;
+const ITEM_RECORD_MAX_CHARS = 1500;
 const FEEDBACK_IN_PROMPT = 30;
-// The spec suggests 4000, but verdict JSON for a busy week (up to 150 items,
-// each with a uuid and a reason sentence) does not fit in 4000 output tokens.
-const DIGEST_MAX_TOKENS = 8192;
+// Verdict JSON for a busy week (up to ITEM_CAP items, each with a uuid and a
+// reason sentence) plus the per-category narratives needs generous headroom.
+const DIGEST_MAX_TOKENS = 24576;
 
 export type DigestRunResult = {
   digestId: string | null;
@@ -216,7 +216,7 @@ function buildPrompt(options: {
       `  "sections": [`,
       `    {`,
       `      "category": "category name",`,
-      `      "narrative_md": "2 to 4 sentences on what happened in this category",`,
+      `      "narrative_md": "a complete markdown summary of this category, roughly 100 to 250 words, covering everything the reader needs to know from this week's items so they are up to date without reading them",`,
       `      "items": [`,
       `        { "item_id": "uuid", "verdict": "must_read | worth_it | skip", "reason": "one sentence" }`,
       `      ]`,

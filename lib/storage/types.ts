@@ -164,6 +164,9 @@ export interface Storage {
     summary: string,
     topics: string[],
   ): Promise<void>;
+  // Clears summaries so summarizePendingItems regenerates them; returns the
+  // number of items affected.
+  clearItemSummariesSince(iso: string): Promise<number>;
   countItemsSince(iso: string): Promise<number>;
   listInboxItems(filter: {
     source?: string;
