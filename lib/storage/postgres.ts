@@ -148,6 +148,16 @@ export class PostgresStorage implements Storage {
     }
   }
 
+  async setSourceCategory(
+    id: string,
+    categoryId: string | null,
+  ): Promise<void> {
+    await this.#pool.query(
+      `update sources set category_id = $2 where id = $1`,
+      [id, categoryId],
+    );
+  }
+
   async deleteSource(id: string): Promise<void> {
     await this.#pool.query(`delete from sources where id = $1`, [id]);
   }

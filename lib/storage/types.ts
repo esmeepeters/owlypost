@@ -138,6 +138,7 @@ export interface Storage {
     status: SourceStatus,
     clearFailures: boolean,
   ): Promise<void>;
+  setSourceCategory(id: string, categoryId: string | null): Promise<void>;
   deleteSource(id: string): Promise<void>;
 
   // categories

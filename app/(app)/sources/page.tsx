@@ -63,7 +63,11 @@ export default async function SourcesPage() {
           </h2>
           <ul className="mt-2 divide-y divide-neutral-100">
             {sources.map((source) => (
-              <SourceRow key={source.id} source={source} />
+              <SourceRow
+                key={source.id}
+                source={source}
+                categories={categoryList}
+              />
             ))}
           </ul>
         </section>
@@ -76,7 +80,11 @@ export default async function SourcesPage() {
           </h2>
           <ul className="mt-2 divide-y divide-neutral-100">
             {uncategorized.map((source) => (
-              <SourceRow key={source.id} source={source} />
+              <SourceRow
+                key={source.id}
+                source={source}
+                categories={categoryList}
+              />
             ))}
           </ul>
         </section>

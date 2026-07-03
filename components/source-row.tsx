@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Source } from "@/lib/types";
+import type { Category, Source } from "@/lib/types";
 
 const STATUS_STYLES: Record<Source["status"], string> = {
   active: "bg-green-50 text-green-700 border-green-200",
@@ -10,7 +10,13 @@ const STATUS_STYLES: Record<Source["status"], string> = {
   error: "bg-red-50 text-red-700 border-red-200",
 };
 
-export function SourceRow({ source }: { source: Source }) {
+export function SourceRow({
+  source,
+  categories,
+}: {
+  source: Source;
+  categories: Category[];
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -20,6 +26,17 @@ export function SourceRow({ source }: { source: Source }) {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ status }),
+    });
+    setBusy(false);
+    router.refresh();
+  }
+
+  async function setCategory(categoryId: string) {
+    setBusy(true);
+    await fetch(`/api/sources/${source.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ categoryId: categoryId || null }),
     });
     setBusy(false);
     router.refresh();
@@ -40,7 +57,7 @@ export function SourceRow({ source }: { source: Source }) {
   }
 
   return (
-    <li className="flex items-start gap-3 py-3">
+    <li className="flex items-center gap-3 py-3">
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">
           {source.site_url ? (
@@ -61,6 +78,19 @@ export function SourceRow({ source }: { source: Source }) {
           <p className="mt-1 text-xs text-red-600">{source.last_error}</p>
         )}
       </div>
+      <select
+        value={source.category_id ?? ""}
+        onChange={(event) => setCategory(event.target.value)}
+        disabled={busy}
+        className="rounded border border-neutral-300 px-1.5 py-0.5 text-xs text-neutral-600 focus:border-accent focus:outline-none disabled:opacity-50"
+      >
+        {categories.map((category) => (
+          <option key={category.id} value={category.id}>
+            {category.name}
+          </option>
+        ))}
+        <option value="">Uncategorized</option>
+      </select>
       <span
         className={`rounded border px-1.5 py-0.5 text-xs ${STATUS_STYLES[source.status]}`}
       >
