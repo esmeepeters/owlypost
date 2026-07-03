@@ -1,5 +1,7 @@
 import { getStorage } from "@/lib/storage";
+import { AddCategory } from "@/components/add-category";
 import { AddSource } from "@/components/add-source";
+import { CategoryRow } from "@/components/category-row";
 import { SourceRow } from "@/components/source-row";
 import { TriggerButton } from "@/components/trigger-button";
 
@@ -8,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function SourcesPage() {
   const storage = getStorage();
   const [categoryList, sourceList] = await Promise.all([
-    storage.listCategories(),
+    storage.listCategoriesWithSourceCounts(),
     storage.listAllSources(),
   ]);
 
@@ -32,6 +34,20 @@ export default async function SourcesPage() {
       </div>
 
       <AddSource categories={categoryList} />
+
+      <details className="mt-6 rounded border border-neutral-200 p-4">
+        <summary className="cursor-pointer text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          Manage categories ({categoryList.length})
+        </summary>
+        <AddCategory />
+        {categoryList.length > 0 && (
+          <ul className="mt-3 divide-y divide-neutral-100">
+            {categoryList.map((category) => (
+              <CategoryRow key={category.id} category={category} />
+            ))}
+          </ul>
+        )}
+      </details>
 
       {sourceList.length === 0 && (
         <p className="mt-8 text-neutral-600">

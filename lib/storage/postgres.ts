@@ -7,6 +7,7 @@ import type {
   SourceStatus,
 } from "../types.ts";
 import type {
+  CategoryWithCount,
   DigestInsert,
   DigestItemDetail,
   DigestItemInput,
@@ -160,9 +161,20 @@ export class PostgresStorage implements Storage {
     return rows;
   }
 
+  async listCategoriesWithSourceCounts(): Promise<CategoryWithCount[]> {
+    const { rows } = await this.#pool.query<CategoryWithCount>(
+      `select c.*, count(s.id)::int as source_count
+         from categories c
+         left join sources s on s.category_id = c.id
+        group by c.id
+        order by c.name`,
+    );
+    return rows;
+  }
+
   async findCategoryByName(name: string): Promise<Category | null> {
     const { rows } = await this.#pool.query<Category>(
-      `select * from categories where name = $1`,
+      `select * from categories where lower(name) = lower($1)`,
       [name],
     );
     return rows[0] ?? null;
@@ -174,6 +186,44 @@ export class PostgresStorage implements Storage {
       [name],
     );
     return rows[0];
+  }
+
+  async updateCategory(id: string, name: string): Promise<Category | null> {
+    const { rows } = await this.#pool.query<Category>(
+      `update categories set name = $2, updated_at = now()
+        where id = $1
+        returning *`,
+      [id, name],
+    );
+    return rows[0] ?? null;
+  }
+
+  async deleteCategory(
+    id: string,
+  ): Promise<{ deleted: boolean; unlinkedSourceTitles: string[] }> {
+    // Both CTEs see the same snapshot, so `affected` reads the pre-delete
+    // links even though the FK nulls category_id in the same statement.
+    const { rows } = await this.#pool.query<{
+      deleted_count: number;
+      titles: string[];
+    }>(
+      `with affected as (
+         select title from sources where category_id = $1
+       ),
+       deleted as (
+         delete from categories where id = $1 returning id
+       )
+       select (select count(*) from deleted)::int as deleted_count,
+              coalesce(
+                (select array_agg(title order by title) from affected),
+                '{}'
+              ) as titles`,
+      [id],
+    );
+    return {
+      deleted: rows[0].deleted_count > 0,
+      unlinkedSourceTitles: rows[0].titles,
+    };
   }
 
   // items

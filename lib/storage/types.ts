@@ -41,6 +41,9 @@ export type InboxItem = {
   sources: { id: string; title: string; category_id: string | null };
 };
 
+// A category with the number of sources currently assigned to it.
+export type CategoryWithCount = Category & { source_count: number };
+
 // Feedback flattened with the rated item's title and verdict reason, used as
 // prompt context for the digest and profile synthesis. title is null when the
 // underlying item was deleted.
@@ -139,8 +142,17 @@ export interface Storage {
 
   // categories
   listCategories(): Promise<Category[]>;
+  listCategoriesWithSourceCounts(): Promise<CategoryWithCount[]>;
   findCategoryByName(name: string): Promise<Category | null>;
   insertCategory(name: string): Promise<Category>;
+  // Returns the updated row, or null when no category has this id.
+  updateCategory(id: string, name: string): Promise<Category | null>;
+  // Deletes the category; linked sources are unlinked (FK on delete set null),
+  // never deleted. Returns deleted=false when the id does not exist, plus the
+  // titles of sources that just became uncategorized.
+  deleteCategory(
+    id: string,
+  ): Promise<{ deleted: boolean; unlinkedSourceTitles: string[] }>;
 
   // items
   upsertItems(rows: NewItem[]): Promise<InsertedItem[]>;
