@@ -10,15 +10,17 @@ you. It runs as a Docker Compose stack with three services:
 There is **no built-in authentication** — see [Security](#security) below.
 
 You need: [Docker](https://docs.docker.com/get-docker/) with Compose, and an
-[Anthropic API key](https://platform.claude.com). Optionally a
-[Resend](https://resend.com) account for email delivery.
+LLM API key — [Anthropic](https://platform.claude.com) (default) or
+[OpenAI](https://platform.openai.com) (also covers OpenAI-compatible servers
+such as Ollama or OpenRouter). Optionally a [Resend](https://resend.com)
+account for email delivery.
 
 ## 1. Quick start
 
 ```bash
 git clone https://github.com/esmeepeters/owlypost.git
 cd owlypost
-cp .env.example .env    # fill in ANTHROPIC_API_KEY; defaults cover the rest
+cp .env.example .env    # fill in your LLM API key; defaults cover the rest
 docker compose up -d --build
 ```
 
@@ -43,9 +45,12 @@ Copy `.env.example` for the full annotated list.
 | --- | --- | --- |
 | `DATABASE_URL` | yes | Postgres connection string. Defaults to the bundled container. Point at any external Postgres to use that instead (add `?sslmode=require` for managed providers). |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | yes* | Credentials for the bundled Postgres container (*only when using it). |
-| `ANTHROPIC_API_KEY` | yes | Claude API key (needs API credits — a Claude subscription does not count). |
-| `ANTHROPIC_MODEL_DIGEST` | no | Defaults to `claude-sonnet-4-6`. |
-| `ANTHROPIC_MODEL_SUMMARY` | no | Defaults to `claude-haiku-4-5`. |
+| `LLM_PROVIDER` | no | `anthropic` (default) or `openai`. |
+| `ANTHROPIC_API_KEY` | yes* | Claude API key (*when `LLM_PROVIDER=anthropic`; needs API credits — a Claude subscription does not count). |
+| `OPENAI_API_KEY` | yes* | OpenAI API key (*when `LLM_PROVIDER=openai`; Ollama accepts any non-empty value, e.g. `ollama`). |
+| `OPENAI_BASE_URL` | no | Base URL for OpenAI-compatible servers, e.g. `http://localhost:11434/v1` (Ollama) or `https://openrouter.ai/api/v1`. Best effort — servers vary in JSON-mode support, and small local models may struggle with the digest's structured output. |
+| `LLM_MODEL_DIGEST` | no | Digest model. Defaults per provider: `claude-sonnet-4-6` / `gpt-5`. |
+| `LLM_MODEL_SUMMARY` | no | Summary/profile model. Defaults per provider: `claude-haiku-4-5` / `gpt-5-mini`. |
 | `DIGEST_LANGUAGE` | no | Digest language, defaults to `nl` (Dutch). |
 | `DIGEST_TIMEZONE` | no | Timezone for the digest week window and the worker's schedules. Defaults to `Europe/Amsterdam`. |
 | `INGEST_CRON` | no | Ingestion schedule (cron, in `DIGEST_TIMEZONE`). Defaults to `0 */6 * * *` (every 6 hours). |
@@ -54,6 +59,11 @@ Copy `.env.example` for the full annotated list.
 | `DIGEST_EMAIL_FROM` | no | From address for digest emails (must be on a Resend-verified domain). |
 | `DIGEST_EMAIL_TO` | no | Recipient for digest emails. |
 | `SITE_URL` | no | Public URL of your deployment; only used to build the app links in the digest email. |
+
+> **Breaking change:** the model variables were renamed from
+> `ANTHROPIC_MODEL_DIGEST` / `ANTHROPIC_MODEL_SUMMARY` to `LLM_MODEL_DIGEST` /
+> `LLM_MODEL_SUMMARY`. The old names are no longer read; installs that set them
+> fall back to the default models until the `.env` is updated.
 
 Inside the compose network, `docker-compose.yml` overrides `DATABASE_URL` to
 reach the `postgres` service by name, so the `DATABASE_URL` in `.env` is used

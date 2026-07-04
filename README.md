@@ -8,7 +8,7 @@
 [![Built with Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![Postgres](https://img.shields.io/badge/Postgres-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
-[![Claude](https://img.shields.io/badge/Claude-Sonnet%20%26%20Haiku-D97757)](https://www.anthropic.com)
+[![LLM](https://img.shields.io/badge/LLM-Claude%20%7C%20OpenAI-D97757)](./docs/self-hosting.md#2-environment-variables)
 
 [Features](#features) · [Getting started](#getting-started) · [Self-hosting](./docs/self-hosting.md) · [Architecture](#architecture) · [Contributing](#contributing) · [License](#license)
 
@@ -47,14 +47,15 @@ read one good newsletter than scroll endlessly.
   states.
 - **⏱️ Ingestion every 6 hours** — conditional GETs, deduplication,
   best-effort full-text extraction, and a two-sentence AI summary per item.
-- **📰 A weekly editorial digest** — written by Claude Sonnet, with
+- **📰 A weekly editorial digest** — written by an LLM of your choice, with
   per-category narratives and a _must-read / worth-it / skip_ verdict per
   item.
 - **🔁 A feedback loop** — 👍/👎 (with a reason on thumbs down) feeds a
   persistent, hand-editable preference profile used in every next digest.
 - **✉️ Optional email delivery** — via Resend; the app works fully without it.
 - **🐳 Self-hosted with Docker Compose** — app, worker/scheduler, and a bundled
-  Postgres, one `docker compose up` away. Bring your own LLM key.
+  Postgres, one `docker compose up` away. Bring your own LLM key — Anthropic
+  (default), OpenAI, or any OpenAI-compatible server (Ollama, OpenRouter).
 - **🔒 Single user, no accounts** — AGPL-3.0.
 
 ## Getting started
@@ -65,7 +66,7 @@ runs ingestion and the digest on a schedule, and a bundled **Postgres**.
 ```bash
 git clone https://github.com/esmeepeters/owlypost.git
 cd owlypost
-cp .env.example .env    # add your Anthropic API key; the rest has sane defaults
+cp .env.example .env    # add your LLM API key; the rest has sane defaults
 docker compose up -d --build
 ```
 
@@ -100,9 +101,9 @@ Postgres, the environment-variable table, schedules, and local development).
                 │   feedback · preference_profile                                │
                 └────────────────────────────────────────────────────────────────┘
                                            │
-                              Anthropic API (Claude)
-                       Haiku: summaries + profile synthesis
-                       Sonnet: the weekly digest
+                     LLM API (Anthropic or OpenAI-compatible)
+                    summary model: summaries + profile synthesis
+                          digest model: the weekly digest
                                            │
                                Resend (optional email)
 ```
@@ -127,8 +128,10 @@ directly to the internet**. Secure it at the deployment level:
 ## Costs
 
 Self-hosted, the stack runs on any small box or VPS you already have. The only
-thing that costs actual money is the Claude API — a few cents a week for the
-summaries and the digest. Email via Resend is optional and fits its free plan.
+thing that costs actual money is the LLM API — a few cents a week for the
+summaries and the digest (or nothing, if you point it at a local
+OpenAI-compatible server like Ollama). Email via Resend is optional and fits
+its free plan.
 
 So: run it, fork it, tinker with it. Go for it. 🦉
 

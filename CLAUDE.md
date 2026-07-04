@@ -31,9 +31,9 @@ Keep lint, typecheck, and test green before finishing.
 - **Migrations**: idempotent `.sql` files in `db/migrations/NNNN_*.sql`, applied by the runner in `lib/migrate.ts` (tracks a `schema_migrations` table). Add schema changes as new numbered files.
 - **Jobs & scheduler**: the fetch → summarize → digest → email logic lives in `lib/jobs.ts` (`runIngestJob` / `runDigestJob`). The worker (`scripts/worker.ts` → `lib/scheduler.ts`, node-cron) and the `/api/ingest` + `/api/digest` routes both call these — keep job logic in `lib/`, not in a trigger.
 - **No auth**: single-user; every route/API is open by design. Don't add login, sessions, or per-user scoping (the schema has no user column).
-- **LLM**: Anthropic via `lib/anthropic.ts` (models from `ANTHROPIC_MODEL_*`).
+- **LLM**: provider-agnostic via `lib/llm/` — `getLlm()` returns the provider selected by `LLM_PROVIDER` (`anthropic` or `openai`, the latter also covering OpenAI-compatible servers via `OPENAI_BASE_URL`). Providers implement a single `generateText` primitive; the shared JSON/retry loop lives in `lib/llm/call.ts`. Models from `LLM_MODEL_SUMMARY` / `LLM_MODEL_DIGEST` (per-provider defaults in `lib/llm/index.ts`).
 
-Environment variables are documented in `.env.example` (`DATABASE_URL`, `ANTHROPIC_API_KEY`, `DIGEST_*`, `INGEST_CRON`/`DIGEST_CRON`, Resend + `SITE_URL` for email).
+Environment variables are documented in `.env.example` (`DATABASE_URL`, `LLM_PROVIDER` + `ANTHROPIC_API_KEY`/`OPENAI_API_KEY`, `LLM_MODEL_*`, `DIGEST_*`, `INGEST_CRON`/`DIGEST_CRON`, Resend + `SITE_URL` for email).
 
 ## Deploy
 
