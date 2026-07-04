@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import Parser from "rss-parser";
 import { z } from "zod";
-import { callJson, createAnthropic, summaryModel } from "./anthropic.ts";
+import { getLlm } from "./llm/index.ts";
 import type { Source } from "./types.ts";
 import type { Storage } from "./storage/index.ts";
 import type { NewItem } from "./storage/types.ts";
@@ -227,8 +227,7 @@ export async function summarizePendingItems(
 
   if (pending.length === 0) return 0;
 
-  const client = createAnthropic();
-  const model = summaryModel();
+  const llm = getLlm();
   const language = process.env.DIGEST_LANGUAGE || "nl";
   let summarized = 0;
 
@@ -243,9 +242,8 @@ export async function summarizePendingItems(
         `JSON shape: { "summary": string, "topics": string[] }`,
       ].join("\n");
 
-      const { data } = await callJson({
-        client,
-        model,
+      const { data } = await llm.callJson({
+        model: llm.summaryModel,
         prompt,
         maxTokens: 800,
         schema: summarySchema,

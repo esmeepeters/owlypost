@@ -1,12 +1,7 @@
 import { format, startOfWeek } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { z } from "zod";
-import {
-  callJson,
-  createAnthropic,
-  digestModel,
-  JsonCallError,
-} from "./anthropic.ts";
+import { getLlm, JsonCallError } from "./llm/index.ts";
 import { isEmailConfigured, sendDigestEmail } from "./email.ts";
 import { synthesizeProfile } from "./profile.ts";
 import type { Storage } from "./storage/index.ts";
@@ -327,13 +322,12 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
 
   // 5. Call the model; on a double JSON failure store the raw response with
   // status failed so it surfaces on the digests page.
-  const client = createAnthropic();
-  const model = digestModel();
+  const llm = getLlm();
+  const model = llm.digestModel;
   let body: DigestBody;
   let usage;
   try {
-    const result = await callJson({
-      client,
+    const result = await llm.callJson({
       model,
       system,
       prompt,

@@ -1,4 +1,4 @@
-import { createAnthropic, summaryModel } from "./anthropic.ts";
+import { getLlm } from "./llm/index.ts";
 import type { Storage } from "./storage/index.ts";
 
 const PROFILE_MAX_TOKENS = 800;
@@ -42,17 +42,14 @@ export async function synthesizeProfile(storage: Storage): Promise<boolean> {
     "Respond with the markdown document only - no preamble, no code fences.",
   ].join("\n");
 
-  const client = createAnthropic();
-  const response = await client.messages.create({
-    model: summaryModel(),
-    max_tokens: PROFILE_MAX_TOKENS,
-    messages: [{ role: "user", content: prompt }],
+  const llm = getLlm();
+  const { text: raw } = await llm.callText({
+    model: llm.summaryModel,
+    prompt,
+    maxTokens: PROFILE_MAX_TOKENS,
   });
 
-  const text = response.content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .join("")
+  const text = raw
     .trim()
     .replace(/^```(?:markdown|md)?\s*/i, "")
     .replace(/\s*```$/, "");

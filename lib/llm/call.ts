@@ -1,41 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-
-// Generous timeout: the digest call streams up to 8192 tokens, which can take
-// minutes for a busy week. Background functions allow up to 15 minutes.
-const CALL_TIMEOUT_MS = 600_000;
-
-export function summaryModel(): string {
-  return process.env.ANTHROPIC_MODEL_SUMMARY || "claude-haiku-4-5";
-}
-
-export function digestModel(): string {
-  return process.env.ANTHROPIC_MODEL_DIGEST || "claude-sonnet-4-6";
-}
-
-export function createAnthropic(): Anthropic {
-  return new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-    timeout: CALL_TIMEOUT_MS,
-  });
-}
-
-export type TokenUsage = {
-  input_tokens: number;
-  output_tokens: number;
-};
-
-export class JsonCallError extends Error {
-  rawResponse: string;
-  usage: TokenUsage;
-
-  constructor(message: string, rawResponse: string, usage: TokenUsage) {
-    super(message);
-    this.name = "JsonCallError";
-    this.rawResponse = rawResponse;
-    this.usage = usage;
-  }
-}
+import { JsonCallError } from "./types.ts";
+import type { LlmProvider, TokenUsage } from "./types.ts";
 
 function stripCodeFences(text: string): string {
   return text
@@ -45,26 +10,19 @@ function stripCodeFences(text: string): string {
     .trim();
 }
 
-function textOf(response: Anthropic.Message): string {
-  return response.content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .join("");
-}
-
 // Calls the model expecting strict JSON: instructs JSON-only output, strips
 // code fences defensively, parses, validates with zod, and retries once with
 // the validation errors appended. Throws JsonCallError (carrying the raw
 // response and accumulated usage) when the retry also fails.
 export async function callJson<T>(options: {
-  client: Anthropic;
+  provider: LlmProvider;
   model: string;
   system?: string;
   prompt: string;
   maxTokens: number;
   schema: z.ZodType<T>;
 }): Promise<{ data: T; usage: TokenUsage }> {
-  const { client, model, system, prompt, maxTokens, schema } = options;
+  const { provider, model, system, prompt, maxTokens, schema } = options;
   const usage: TokenUsage = { input_tokens: 0, output_tokens: 0 };
 
   const instruction =
@@ -79,21 +37,17 @@ export async function callJson<T>(options: {
         ? `${prompt}\n\n${instruction}`
         : `${prompt}\n\n${instruction}\n\nYour previous response was invalid:\n${lastError}\n\nRespond again with valid JSON only.`;
 
-    // Stream and collect the final message: a non-streaming request for a large
-    // max_tokens generation can exceed the HTTP timeout and throw before any
-    // result is returned. Streaming keeps the connection alive token by token.
-    const response = await client.messages
-      .stream({
-        model,
-        max_tokens: maxTokens,
-        ...(system ? { system } : {}),
-        messages: [{ role: "user", content: fullPrompt }],
-      })
-      .finalMessage();
+    const response = await provider.generateText({
+      model,
+      ...(system ? { system } : {}),
+      prompt: fullPrompt,
+      maxTokens,
+      expectJson: true,
+    });
 
     usage.input_tokens += response.usage.input_tokens;
     usage.output_tokens += response.usage.output_tokens;
-    lastRaw = textOf(response);
+    lastRaw = response.text;
 
     let parsed: unknown;
     try {
@@ -117,4 +71,23 @@ export async function callJson<T>(options: {
     lastRaw,
     usage,
   );
+}
+
+// Plain text call: no JSON instruction, no retry. Callers do their own
+// post-processing (e.g. markdown fence stripping).
+export async function callText(options: {
+  provider: LlmProvider;
+  model: string;
+  system?: string;
+  prompt: string;
+  maxTokens: number;
+}): Promise<{ text: string; usage: TokenUsage }> {
+  const { provider, model, system, prompt, maxTokens } = options;
+  const { text, usage } = await provider.generateText({
+    model,
+    ...(system ? { system } : {}),
+    prompt,
+    maxTokens,
+  });
+  return { text, usage };
 }

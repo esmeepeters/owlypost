@@ -1,7 +1,7 @@
 // Clears the summaries of this week's items and regenerates them, so a prompt
 // change in summarizePendingItems also applies to already-ingested items.
-// Run with: pnpm resummarize (reads .env for DATABASE_URL and
-// ANTHROPIC_API_KEY).
+// Run with: pnpm resummarize (reads .env for DATABASE_URL and the LLM
+// provider key).
 import { weekWindow } from "../lib/digest.ts";
 import { summarizePendingItems } from "../lib/ingest.ts";
 import { getStorage } from "../lib/storage/index.ts";
