@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   capItemsProportionally,
+  eligibilityRange,
   fixupSections,
   weekWindow,
   type DigestBody,
@@ -22,6 +23,19 @@ test("weekWindow handles the timezone date boundary", () => {
   const now = new Date("2026-06-07T23:30:00Z");
   const { weekStart } = weekWindow(now, "Europe/Amsterdam");
   assert.equal(weekStart, "2026-06-08");
+});
+
+test("eligibilityRange spans the default 30 days up to now", () => {
+  const now = new Date("2026-07-01T12:00:00Z");
+  const { sinceUtc, untilUtc } = eligibilityRange(now);
+  assert.equal(untilUtc, "2026-07-01T12:00:00.000Z");
+  assert.equal(sinceUtc, "2026-06-01T12:00:00.000Z");
+});
+
+test("eligibilityRange respects a custom max age", () => {
+  const now = new Date("2026-07-01T12:00:00Z");
+  const { sinceUtc } = eligibilityRange(now, 7);
+  assert.equal(sinceUtc, "2026-06-24T12:00:00.000Z");
 });
 
 function makeItems(sourceCounts: Record<string, number>) {

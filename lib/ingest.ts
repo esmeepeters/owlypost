@@ -52,6 +52,52 @@ export function canonicalHash(
   return createHash("sha256").update(basis).digest("hex");
 }
 
+// Unlike canonicalHash this ignores the guid, so the same article carried by
+// two different feeds (feed-specific guids, same link) hashes identically —
+// the key for cross-feed dedup.
+export function urlHash(url: string | null | undefined): string | null {
+  if (!url) return null;
+  return createHash("sha256").update(normalizeUrl(url)).digest("hex");
+}
+
+export type BackfillRow = {
+  id: string;
+  source_id: string;
+  url: string;
+  fetched_at: string;
+};
+
+// Plans url_hash assignments for items ingested before the cross-feed dedup
+// migration (0003). In a URL group spanning multiple sources only the
+// earliest-fetched item gets the hash — the rest stay null so the cross-source
+// exclusion constraint is never violated.
+export function planUrlHashBackfill(
+  rows: BackfillRow[],
+): { id: string; url_hash: string }[] {
+  const groups = new Map<string, BackfillRow[]>();
+  for (const row of rows) {
+    const hash = urlHash(row.url);
+    if (!hash) continue;
+    const group = groups.get(hash) ?? [];
+    group.push(row);
+    groups.set(hash, group);
+  }
+
+  const plan: { id: string; url_hash: string }[] = [];
+  for (const [hash, group] of groups) {
+    const sourceIds = new Set(group.map((row) => row.source_id));
+    if (sourceIds.size === 1) {
+      for (const row of group) plan.push({ id: row.id, url_hash: hash });
+    } else {
+      const earliest = group.reduce((a, b) =>
+        a.fetched_at <= b.fetched_at ? a : b,
+      );
+      plan.push({ id: earliest.id, url_hash: hash });
+    }
+  }
+  return plan;
+}
+
 // Best-effort HTML to text: good enough for model input, not for display.
 export function stripHtml(html: string): string {
   return html
@@ -169,6 +215,7 @@ async function ingestSource(
       guid: item.guid ?? null,
       url: item.link ?? null,
       canonical_hash: hash,
+      url_hash: urlHash(item.link),
       title: item.title?.trim() || "(untitled)",
       author: item.creator ?? null,
       content_text: itemContent(item),

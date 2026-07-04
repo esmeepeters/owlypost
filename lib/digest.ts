@@ -5,9 +5,12 @@ import { getLlm, JsonCallError } from "./llm/index.ts";
 import { isEmailConfigured, sendDigestEmail } from "./email.ts";
 import { synthesizeProfile } from "./profile.ts";
 import type { Storage } from "./storage/index.ts";
-import type { WeekItem as DigestItemInput } from "./storage/types.ts";
+import type { DigestCandidate as DigestItemInput } from "./storage/types.ts";
 
 const ITEM_CAP = 300;
+// Undigested items older than this never enter a digest, so a newly added
+// source with years of archives cannot flood the first digest after it.
+const MAX_ITEM_AGE_DAYS = 30;
 const ITEM_RECORD_MAX_CHARS = 1500;
 const FEEDBACK_IN_PROMPT = 30;
 // Verdict JSON for a busy week (up to ITEM_CAP items, each with a uuid and a
@@ -26,6 +29,17 @@ export function weekWindow(now: Date, timeZone: string) {
     startUtc: fromZonedTime(zonedStart, timeZone),
     weekStart: format(zonedStart, "yyyy-MM-dd"),
     weekEnd: format(zonedNow, "yyyy-MM-dd"),
+  };
+}
+
+// The range digest candidates must fall in: everything up to now, at most
+// maxAgeDays old. The upper bound keeps future-dated published_at out.
+export function eligibilityRange(now: Date, maxAgeDays = MAX_ITEM_AGE_DAYS) {
+  return {
+    sinceUtc: new Date(
+      now.getTime() - maxAgeDays * 24 * 60 * 60 * 1000,
+    ).toISOString(),
+    untilUtc: now.toISOString(),
   };
 }
 
@@ -186,7 +200,7 @@ function buildPrompt(options: {
     }
   }
   lines.push("");
-  lines.push("This week's items, grouped by category:");
+  lines.push("New items since the last digest, grouped by category:");
   for (const [category, items] of itemsByCategory) {
     lines.push("");
     lines.push(`## ${category}`);
@@ -238,14 +252,13 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
   const timeZone = process.env.DIGEST_TIMEZONE || "UTC";
   const language = process.env.DIGEST_LANGUAGE || "en";
   const now = new Date();
-  const { startUtc, weekStart, weekEnd } = weekWindow(now, timeZone);
+  const { weekStart, weekEnd } = weekWindow(now, timeZone);
 
-  // 1. Collect the week's items (published in window, falling back to
-  // fetched_at when published_at is missing).
-  const allItems = await storage.getWeekItems({
-    startUtc: startUtc.toISOString(),
-    endUtc: now.toISOString(),
-  });
+  // 1. Collect everything not yet included in a digest (by published_at,
+  // falling back to fetched_at), capped in age. Membership in digest_items is
+  // only recorded on a successful run, so a failed run leaves its items
+  // eligible for the next one, and a re-run after success finds nothing.
+  const allItems = await storage.getUndigestedItems(eligibilityRange(now));
 
   // 2. Quiet week: store a short digest, email it, and stop.
   if (allItems.length === 0) {

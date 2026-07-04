@@ -17,7 +17,7 @@ import type {
 } from "../types.ts";
 
 // An item joined with its source, as needed to build a digest.
-export type WeekItem = {
+export type DigestCandidate = {
   id: string;
   title: string;
   url: string | null;
@@ -66,6 +66,7 @@ export type NewItem = {
   guid: string | null;
   url: string | null;
   canonical_hash: string;
+  url_hash: string | null;
   title: string;
   author: string | null;
   content_text: string | null;
@@ -111,8 +112,8 @@ export type DigestItemInput = {
   rank: number | null;
 };
 
-// Half-open week window as ISO strings.
-export type WeekWindow = { startUtc: string; endUtc: string };
+// Closed time range as ISO strings.
+export type ItemRange = { sinceUtc: string; untilUtc: string };
 
 export interface Storage {
   // sources
@@ -173,7 +174,15 @@ export interface Storage {
     category?: string;
     limit: number;
   }): Promise<InboxItem[]>;
-  getWeekItems(window: WeekWindow): Promise<WeekItem[]>;
+  // Items in the range (by published_at, falling back to fetched_at) that have
+  // not been included in any digest yet.
+  getUndigestedItems(range: ItemRange): Promise<DigestCandidate[]>;
+  // Items with a URL but no url_hash yet (pre-0003 rows), for the one-off
+  // backfill in scripts/backfill-url-hash.ts.
+  listItemsMissingUrlHash(): Promise<
+    { id: string; source_id: string; url: string; fetched_at: string }[]
+  >;
+  setItemUrlHash(id: string, urlHash: string): Promise<void>;
 
   // digests
   insertDigest(input: DigestInsert): Promise<{ id: string }>;

@@ -16,7 +16,8 @@
     "test": "node --test \"lib/**/*.test.ts\"",
     "migrate": "node --env-file=.env scripts/migrate.ts",
     "seed": "node --env-file=.env scripts/seed.ts",
-    "resummarize": "node --env-file=.env scripts/resummarize.ts"
+    "resummarize": "node --env-file=.env scripts/resummarize.ts",
+    "backfill-url-hash": "node --env-file=.env scripts/backfill-url-hash.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",

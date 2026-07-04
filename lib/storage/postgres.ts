@@ -8,18 +8,18 @@ import type {
 } from "../types.ts";
 import type {
   CategoryWithCount,
+  DigestCandidate,
   DigestInsert,
   DigestItemDetail,
   DigestItemInput,
   FeedbackContext,
   InboxItem,
   InsertedItem,
+  ItemRange,
   NewItem,
   PendingItem,
   SourceInput,
   Storage,
-  WeekItem,
-  WeekWindow,
 } from "./types.ts";
 
 // Postgres unique-violation SQLSTATE, surfaced on the error by node-postgres.
@@ -245,16 +245,21 @@ export class PostgresStorage implements Storage {
       r.guid,
       r.url,
       r.canonical_hash,
+      r.url_hash,
       r.title,
       r.author,
       r.content_text,
       r.published_at,
     ]);
+    // The bare ON CONFLICT lets both arbiters skip rows: the unique constraint
+    // on (source_id, canonical_hash) for within-feed dedup, and the exclusion
+    // constraint on (url_hash, source_id) for the same article carried by a
+    // different feed.
     const { rows: inserted } = await this.#pool.query<InsertedItem>(
       `insert into items
-         (source_id, guid, url, canonical_hash, title, author, content_text, published_at)
+         (source_id, guid, url, canonical_hash, url_hash, title, author, content_text, published_at)
        values ${text}
-       on conflict (source_id, canonical_hash) do nothing
+       on conflict do nothing
        returning id, url, content_text`,
       params,
     );
@@ -338,17 +343,42 @@ export class PostgresStorage implements Storage {
     return rows;
   }
 
-  async getWeekItems(window: WeekWindow): Promise<WeekItem[]> {
-    const { rows } = await this.#pool.query<WeekItem>(
+  async getUndigestedItems(range: ItemRange): Promise<DigestCandidate[]> {
+    const { rows } = await this.#pool.query<DigestCandidate>(
       `select i.id, i.title, i.url, i.summary, i.topics, i.published_at, i.fetched_at, i.source_id,
               json_build_object('title', s.title, 'category_id', s.category_id) as sources
          from items i
          join sources s on s.id = i.source_id
-        where (i.published_at >= $1 and i.published_at <= $2)
-           or (i.published_at is null and i.fetched_at >= $1)`,
-      [window.startUtc, window.endUtc],
+        where coalesce(i.published_at, i.fetched_at) >= $1
+          and coalesce(i.published_at, i.fetched_at) <= $2
+          and not exists (select 1 from digest_items di where di.item_id = i.id)`,
+      [range.sinceUtc, range.untilUtc],
     );
     return rows;
+  }
+
+  async listItemsMissingUrlHash(): Promise<
+    { id: string; source_id: string; url: string; fetched_at: string }[]
+  > {
+    const { rows } = await this.#pool.query<{
+      id: string;
+      source_id: string;
+      url: string;
+      fetched_at: string;
+    }>(
+      `select id, source_id, url, fetched_at
+         from items
+        where url is not null and url_hash is null
+        order by fetched_at asc`,
+    );
+    return rows;
+  }
+
+  async setItemUrlHash(id: string, urlHash: string): Promise<void> {
+    await this.#pool.query(`update items set url_hash = $2 where id = $1`, [
+      id,
+      urlHash,
+    ]);
   }
 
   // digests
