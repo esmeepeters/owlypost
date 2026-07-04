@@ -1,4 +1,5 @@
 import Parser from "rss-parser";
+import { safeFetch, safeHttpUrl } from "./net.ts";
 
 export type FeedPreviewItem = {
   title: string;
@@ -74,10 +75,10 @@ async function parseFeedBody(
     return {
       feedUrl,
       title: feed.title?.trim() || host,
-      siteUrl: feed.link ?? null,
+      siteUrl: safeHttpUrl(feed.link),
       recentItems: feed.items.slice(0, 3).map((item) => ({
         title: item.title?.trim() || "(untitled)",
-        url: item.link ?? null,
+        url: safeHttpUrl(item.link),
         publishedAt: item.isoDate ?? item.pubDate ?? null,
       })),
     };
@@ -204,7 +205,7 @@ async function detectReddit(
 // fetcher, so tests can run without a network.
 export async function detectFeed(
   input: string,
-  fetcher: Fetcher = fetch,
+  fetcher: Fetcher = safeFetch,
 ): Promise<DetectResult> {
   const normalized = normalizeInput(input);
 

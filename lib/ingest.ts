@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import Parser from "rss-parser";
 import { z } from "zod";
 import { getLlm } from "./llm/index.ts";
+import { assertPublicUrl, safeFetch, safeHttpUrl } from "./net.ts";
 import type { Source } from "./types.ts";
 import type { Storage } from "./storage/index.ts";
 import type { NewItem } from "./storage/types.ts";
@@ -144,9 +145,8 @@ async function fetchFeed(source: Source): Promise<
   if (source.etag) headers["if-none-match"] = source.etag;
   if (source.last_modified) headers["if-modified-since"] = source.last_modified;
 
-  const response = await fetch(source.feed_url, {
+  const response = await safeFetch(source.feed_url, {
     headers,
-    redirect: "follow",
     signal: AbortSignal.timeout(FEED_TIMEOUT_MS),
   });
 
@@ -174,6 +174,11 @@ async function fetchFeed(source: Source): Promise<
 // Best effort full-text extraction for items whose feed content is short.
 async function extractFullText(url: string): Promise<string | null> {
   try {
+    // SSRF guard: the extractor does its own fetching (we can't route it
+    // through safeFetch), so validate the target host up front. This blocks a
+    // feed whose item links point at internal addresses; the library still
+    // follows its own redirects, which is residual risk.
+    await assertPublicUrl(url);
     // Loaded lazily: @extractus/article-extractor is ESM-only and heavy, so it
     // is imported on demand only when an item actually needs full-text.
     const { extract } = await import("@extractus/article-extractor");
@@ -207,15 +212,16 @@ async function ingestSource(
   const seen = new Set<string>();
   const rows: NewItem[] = [];
   for (const item of result.items) {
-    const hash = canonicalHash(item.guid, item.link);
+    const link = safeHttpUrl(item.link);
+    const hash = canonicalHash(item.guid, link);
     if (!hash || seen.has(hash)) continue;
     seen.add(hash);
     rows.push({
       source_id: source.id,
       guid: item.guid ?? null,
-      url: item.link ?? null,
+      url: link,
       canonical_hash: hash,
-      url_hash: urlHash(item.link),
+      url_hash: urlHash(link),
       title: item.title?.trim() || "(untitled)",
       author: item.creator ?? null,
       content_text: itemContent(item),

@@ -10,8 +10,9 @@ x-app-env: &app-env
   NODE_ENV: production
   # Reach the bundled Postgres over the compose network (overrides the host
   # value in .env). Point DATABASE_URL in .env at an external database and drop
-  # this to use that instead.
-  DATABASE_URL: postgres://${POSTGRES_USER:-owly}:${POSTGRES_PASSWORD:-owly}@postgres:5432/${POSTGRES_DB:-owly}
+  # this to use that instead. POSTGRES_PASSWORD must be set in .env — the
+  # stack refuses to start otherwise (see below).
+  DATABASE_URL: postgres://${POSTGRES_USER:-owly}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-owly}
 
 services:
   postgres:
@@ -19,11 +20,16 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-owly}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-owly}
+      # No default: an unset/empty POSTGRES_PASSWORD aborts `docker compose up`
+      # rather than silently booting the database with a well-known password.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-owly}
     ports:
-      # For host access (e.g. `pnpm migrate` / `pnpm seed` from the host).
-      - "5432:5432"
+      # Bound to loopback only: reachable for host tooling (`pnpm migrate` /
+      # `pnpm seed`) but never exposed on the machine's public interfaces.
+      # Other compose services reach Postgres over the internal network, not
+      # this mapping.
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -51,7 +57,10 @@ services:
     env_file: .env
     environment: *app-env
     ports:
-      - "3000:3000"
+      # Bound to loopback: put a reverse proxy (TLS + optional auth) in front,
+      # as the app has no authentication of its own. Change to "3000:3000" only
+      # if you deliberately want it on every interface.
+      - "127.0.0.1:3000:3000"
     depends_on:
       migrate:
         condition: service_completed_successfully

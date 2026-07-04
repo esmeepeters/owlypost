@@ -7,6 +7,15 @@ import React from "react";
 const INLINE_PATTERN =
   /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
 
+function isHttpUrl(url: string): boolean {
+  try {
+    const protocol = new URL(url).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function renderInline(text: string): React.ReactNode[] {
   return text.split(INLINE_PATTERN).map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
@@ -24,17 +33,23 @@ function renderInline(text: string): React.ReactNode[] {
     }
     const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
     if (link) {
-      return (
-        <a
-          key={index}
-          href={link[2]}
-          target="_blank"
-          rel="noreferrer"
-          className="text-accent underline"
-        >
-          {link[1]}
-        </a>
-      );
+      // Only render http(s) links: the digest prose is model-generated, so a
+      // "javascript:" href would be an injection vector. Others fall back to
+      // plain text (the link label).
+      if (isHttpUrl(link[2])) {
+        return (
+          <a
+            key={index}
+            href={link[2]}
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent underline"
+          >
+            {link[1]}
+          </a>
+        );
+      }
+      return link[1];
     }
     return part;
   });
