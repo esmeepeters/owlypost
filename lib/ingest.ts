@@ -228,7 +228,7 @@ export async function summarizePendingItems(
   if (pending.length === 0) return 0;
 
   const llm = getLlm();
-  const language = process.env.DIGEST_LANGUAGE || "nl";
+  const language = process.env.DIGEST_LANGUAGE || "en";
   let summarized = 0;
 
   for (const item of pending) {

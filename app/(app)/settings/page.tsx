@@ -23,9 +23,9 @@ export default async function SettingsPage() {
         </h2>
         <dl className="mt-2 grid grid-cols-[10rem_1fr] gap-y-1 text-sm">
           <dt className="text-neutral-500">Language</dt>
-          <dd>{process.env.DIGEST_LANGUAGE || "nl"}</dd>
+          <dd>{process.env.DIGEST_LANGUAGE || "en"}</dd>
           <dt className="text-neutral-500">Timezone</dt>
-          <dd>{process.env.DIGEST_TIMEZONE || "Europe/Amsterdam"}</dd>
+          <dd>{process.env.DIGEST_TIMEZONE || "UTC"}</dd>
           <dt className="text-neutral-500">Email delivery</dt>
           <dd>
             {emailConfigured

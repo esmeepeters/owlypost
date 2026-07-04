@@ -13,7 +13,7 @@ async function main() {
   }
   const storage = getStorage();
 
-  const timeZone = process.env.DIGEST_TIMEZONE || "Europe/Amsterdam";
+  const timeZone = process.env.DIGEST_TIMEZONE || "UTC";
   const { startUtc, weekStart } = weekWindow(new Date(), timeZone);
   const cleared = await storage.clearItemSummariesSince(startUtc.toISOString());
   console.log(`Cleared ${cleared} summaries for the week of ${weekStart}.`);

@@ -5,7 +5,7 @@ import { runDigestJob, runIngestJob } from "./jobs.ts";
 // at 17:00. Evaluated in DIGEST_TIMEZONE, so the digest lands at 17:00 local.
 const INGEST_CRON = process.env.INGEST_CRON || "0 */6 * * *";
 const DIGEST_CRON = process.env.DIGEST_CRON || "0 17 * * 0";
-const TIMEZONE = process.env.DIGEST_TIMEZONE || "Europe/Amsterdam";
+const TIMEZONE = process.env.DIGEST_TIMEZONE || "UTC";
 
 // Starts the in-process scheduler. node-cron's noOverlap prevents a slow run
 // from overlapping the next tick. Errors are logged, never thrown, so one bad

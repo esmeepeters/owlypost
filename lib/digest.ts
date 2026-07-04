@@ -235,8 +235,8 @@ function quietWeekIntro(language: string): string {
 }
 
 export async function runDigest(storage: Storage): Promise<DigestRunResult> {
-  const timeZone = process.env.DIGEST_TIMEZONE || "Europe/Amsterdam";
-  const language = process.env.DIGEST_LANGUAGE || "nl";
+  const timeZone = process.env.DIGEST_TIMEZONE || "UTC";
+  const language = process.env.DIGEST_LANGUAGE || "en";
   const now = new Date();
   const { startUtc, weekStart, weekEnd } = weekWindow(now, timeZone);
 

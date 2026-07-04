@@ -22,7 +22,7 @@ export async function synthesizeProfile(storage: Storage): Promise<boolean> {
     return `- ${row.rating === "up" ? "👍" : "👎"} "${title}"${verdictReason}${comment}`;
   });
 
-  const language = process.env.DIGEST_LANGUAGE || "nl";
+  const language = process.env.DIGEST_LANGUAGE || "en";
   const prompt = [
     "You maintain the reading-preference profile for the single reader of a personal weekly digest.",
     `Rewrite the profile below as a markdown document of at most 400 words, in the language "${language}", describing stable reading preferences:`,

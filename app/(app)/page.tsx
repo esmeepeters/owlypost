@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const storage = getStorage();
-  const timeZone = process.env.DIGEST_TIMEZONE || "Europe/Amsterdam";
+  const timeZone = process.env.DIGEST_TIMEZONE || "UTC";
   const { startUtc } = weekWindow(new Date(), timeZone);
 
   const [itemCount, digest, broken] = await Promise.all([

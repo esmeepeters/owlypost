@@ -51,8 +51,8 @@ Copy `.env.example` for the full annotated list.
 | `OPENAI_BASE_URL` | no | Base URL for OpenAI-compatible servers, e.g. `http://localhost:11434/v1` (Ollama) or `https://openrouter.ai/api/v1`. Best effort — servers vary in JSON-mode support, and small local models may struggle with the digest's structured output. |
 | `LLM_MODEL_DIGEST` | no | Digest model. Defaults per provider: `claude-sonnet-4-6` / `gpt-5`. |
 | `LLM_MODEL_SUMMARY` | no | Summary/profile model. Defaults per provider: `claude-haiku-4-5` / `gpt-5-mini`. |
-| `DIGEST_LANGUAGE` | no | Digest language, defaults to `nl` (Dutch). |
-| `DIGEST_TIMEZONE` | no | Timezone for the digest week window and the worker's schedules. Defaults to `Europe/Amsterdam`. |
+| `DIGEST_LANGUAGE` | no | Digest language, defaults to `en` (English). |
+| `DIGEST_TIMEZONE` | no | Timezone for the digest week window and the worker's schedules. Defaults to `UTC`. |
 | `INGEST_CRON` | no | Ingestion schedule (cron, in `DIGEST_TIMEZONE`). Defaults to `0 */6 * * *` (every 6 hours). |
 | `DIGEST_CRON` | no | Digest schedule (cron, in `DIGEST_TIMEZONE`). Defaults to `0 17 * * 0` (Sundays 17:00). |
 | `RESEND_API_KEY` | no | Leave empty to disable email. |
