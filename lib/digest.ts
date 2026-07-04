@@ -221,11 +221,11 @@ function buildPrompt(options: {
     [
       "Write the weekly digest as JSON matching exactly this shape:",
       `{`,
-      `  "intro_md": "editorial summary of the week across all sources, 150 to 300 words, in ${language}",`,
+      `  "intro_md": "editorial summary of the week across all sources, at most 300 words, in ${language} — scale it down when the week has few items; never pad",`,
       `  "sections": [`,
       `    {`,
       `      "category": "category name",`,
-      `      "narrative_md": "a complete markdown summary of this category, roughly 100 to 250 words, covering everything the reader needs to know from this week's items so they are up to date without reading them",`,
+      `      "narrative_md": "a complete markdown summary of this category, at most 250 words and proportional to the number and substance of the items (a category with one or two items needs only a short paragraph), covering everything the reader needs to know from this week's items so they are up to date without reading them",`,
       `      "items": [`,
       `        { "item_id": "uuid", "verdict": "must_read | worth_it | skip", "reason": "one sentence" }`,
       `      ]`,
@@ -236,6 +236,7 @@ function buildPrompt(options: {
       "",
       "Every item_id from the list above must appear exactly once across all sections.",
       "Use the category names as given. All prose in the digest language.",
+      "Match length to substance: with few items, keep the digest short rather than padding it.",
     ].join("\n"),
   );
 
@@ -244,8 +245,8 @@ function buildPrompt(options: {
 
 function quietWeekIntro(language: string): string {
   return language === "nl"
-    ? "Een stille week: er zijn geen nieuwe items binnengekomen bij je bronnen. Tijd om iets uit de leeslijst te pakken — of gewoon even niets te lezen."
-    : "A quiet week: your sources produced no new items. Time to pick something from the backlog — or simply enjoy reading nothing.";
+    ? "Deze week niets te melden: je bronnen hebben geen nieuwe items gepubliceerd. De volgende digest pikt de draad weer op."
+    : "Nothing to show this week: your sources published no new items. The next digest will cover whatever comes in.";
 }
 
 export async function runDigest(storage: Storage): Promise<DigestRunResult> {
