@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatShortDate, formatWeekRange } from "@/lib/format";
 import { getStorage } from "@/lib/storage";
 import type { Digest } from "@/lib/types";
 import { TriggerButton } from "@/components/trigger-button";
@@ -14,6 +15,7 @@ const STATUS_STYLES: Record<Digest["status"], string> = {
 
 export default async function DigestsPage() {
   const digestList = await getStorage().listDigests();
+  const language = process.env.DIGEST_LANGUAGE || "en";
 
   return (
     <>
@@ -40,10 +42,10 @@ export default async function DigestsPage() {
               href={`/digests/${digest.id}`}
               className="flex-1 font-medium hover:text-accent"
             >
-              Week of {digest.week_start} – {digest.week_end}
+              {formatWeekRange(digest.week_start, digest.week_end, language)}
             </Link>
             <span className="text-xs text-neutral-400">
-              {new Date(digest.created_at).toLocaleDateString("en-GB")}
+              {formatShortDate(new Date(digest.created_at), language)}
             </span>
             <span
               className={`rounded border px-1.5 py-0.5 text-xs ${STATUS_STYLES[digest.status]}`}
