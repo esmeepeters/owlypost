@@ -11,15 +11,23 @@ export async function synthesizeProfile(storage: Storage): Promise<boolean> {
   const profile = await storage.getProfile();
   if (!profile) return false;
 
-  const feedbackRows = await storage.listFeedbackSince(profile.updated_at);
+  const [feedbackRows, sectionRows] = await Promise.all([
+    storage.listFeedbackSince(profile.updated_at),
+    storage.listSectionFeedbackSince(profile.updated_at),
+  ]);
 
-  if (feedbackRows.length === 0) return false;
+  if (feedbackRows.length === 0 && sectionRows.length === 0) return false;
 
   const feedbackLines = feedbackRows.map((row) => {
     const title = row.title ?? "(deleted item)";
     const verdictReason = row.reason ? ` (verdict reason: ${row.reason})` : "";
     const comment = row.comment ? ` — reader's comment: ${row.comment}` : "";
     return `- ${row.rating === "up" ? "👍" : "👎"} "${title}"${verdictReason}${comment}`;
+  });
+
+  const sectionLines = sectionRows.map((row) => {
+    const comment = row.comment ? ` — reader's comment: ${row.comment}` : "";
+    return `- ${row.rating === "up" ? "👍" : "👎"} summary of "${row.category}" (week of ${row.week_start})${comment}`;
   });
 
   const language = process.env.DIGEST_LANGUAGE || "en";
@@ -37,7 +45,10 @@ export async function synthesizeProfile(storage: Storage): Promise<boolean> {
     profile.profile_md.trim() || "(empty)",
     "",
     "New feedback since the last update:",
-    ...feedbackLines,
+    ...(feedbackLines.length > 0 ? feedbackLines : ["(none)"]),
+    "",
+    "New feedback on category summaries since the last update:",
+    ...(sectionLines.length > 0 ? sectionLines : ["(none)"]),
     "",
     "Respond with the markdown document only - no preamble, no code fences.",
   ].join("\n");

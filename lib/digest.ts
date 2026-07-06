@@ -13,6 +13,7 @@ const ITEM_CAP = 300;
 const MAX_ITEM_AGE_DAYS = 30;
 const ITEM_RECORD_MAX_CHARS = 1500;
 const FEEDBACK_IN_PROMPT = 30;
+const SECTION_FEEDBACK_IN_PROMPT = 10;
 // Verdict JSON for a busy week (up to ITEM_CAP items, each with a uuid and a
 // reason sentence) plus the per-category narratives needs generous headroom.
 const DIGEST_MAX_TOKENS = 24576;
@@ -160,6 +161,12 @@ function buildPrompt(options: {
   categoryNames: string[];
   profileMd: string;
   feedback: { rating: string; title: string; comment: string | null }[];
+  sectionFeedback: {
+    rating: string;
+    category: string;
+    week_start: string;
+    comment: string | null;
+  }[];
   itemsByCategory: Map<string, DigestItemInput[]>;
 }): { system: string; prompt: string } {
   const {
@@ -169,6 +176,7 @@ function buildPrompt(options: {
     categoryNames,
     profileMd,
     feedback,
+    sectionFeedback,
     itemsByCategory,
   } = options;
 
@@ -197,6 +205,22 @@ function buildPrompt(options: {
         `- ${entry.rating === "up" ? "👍" : "👎"} "${entry.title}"${entry.comment ? ` — ${entry.comment}` : ""}`,
       );
     }
+  }
+  lines.push("");
+  lines.push(
+    "Recent feedback on earlier category summaries (rating, category, comment):",
+  );
+  if (sectionFeedback.length === 0) {
+    lines.push("(none yet)");
+  } else {
+    for (const entry of sectionFeedback) {
+      lines.push(
+        `- ${entry.rating === "up" ? "👍" : "👎"} "${entry.category}" (week of ${entry.week_start})${entry.comment ? ` — ${entry.comment}` : ""}`,
+      );
+    }
+    lines.push(
+      "Use this to adjust the style, depth and focus of this week's narrative_md texts.",
+    );
   }
   lines.push("");
   lines.push("New items since the last digest, grouped by category:");
@@ -295,11 +319,13 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
   await synthesizeProfile(storage);
 
   // 4. Gather prompt context.
-  const [categories, profileRow, feedbackRows] = await Promise.all([
-    storage.listCategories(),
-    storage.getProfile(),
-    storage.listRecentFeedback(FEEDBACK_IN_PROMPT),
-  ]);
+  const [categories, profileRow, feedbackRows, sectionFeedbackRows] =
+    await Promise.all([
+      storage.listCategories(),
+      storage.getProfile(),
+      storage.listRecentFeedback(FEEDBACK_IN_PROMPT),
+      storage.listRecentSectionFeedback(SECTION_FEEDBACK_IN_PROMPT),
+    ]);
 
   const categoryName = new Map(categories.map((c) => [c.id, c.name]));
   const nameOf = (item: DigestItemInput) =>
@@ -327,6 +353,7 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
     categoryNames: [...itemsByCategory.keys()],
     profileMd: profileRow?.profile_md ?? "",
     feedback,
+    sectionFeedback: sectionFeedbackRows,
     itemsByCategory,
   });
 
