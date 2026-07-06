@@ -1,3 +1,5 @@
+import { emailDeliveryStatus } from "@/lib/email";
+import { formatShortDateTime } from "@/lib/format";
 import { getStorage } from "@/lib/storage";
 import { ProfileEditor } from "@/components/profile-editor";
 import { TriggerButton } from "@/components/trigger-button";
@@ -7,11 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const profile = await getStorage().getProfile();
 
-  const emailConfigured = Boolean(
-    process.env.RESEND_API_KEY &&
-      process.env.DIGEST_EMAIL_FROM &&
-      process.env.DIGEST_EMAIL_TO,
-  );
+  const email = emailDeliveryStatus();
 
   return (
     <>
@@ -28,8 +26,8 @@ export default async function SettingsPage() {
           <dd>{process.env.DIGEST_TIMEZONE || "UTC"}</dd>
           <dt className="text-neutral-500">Email delivery</dt>
           <dd>
-            {emailConfigured
-              ? `configured (to ${process.env.DIGEST_EMAIL_TO})`
+            {email.configured
+              ? `configured (${email.provider} to ${email.to})`
               : "not configured — digests are available in the app only"}
           </dd>
         </dl>
@@ -88,7 +86,11 @@ export default async function SettingsPage() {
             <span className="text-neutral-400">
               {" "}
               Last synthesis:{" "}
-              {new Date(profile.updated_at).toLocaleString("en-GB")}.
+              {formatShortDateTime(
+                new Date(profile.updated_at),
+                process.env.DIGEST_LANGUAGE || "en",
+              )}
+              .
             </span>
           )}
         </p>

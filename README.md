@@ -52,7 +52,7 @@ read one good newsletter than scroll endlessly.
   item.
 - **🔁 A feedback loop** — 👍/👎 (with a reason on thumbs down) feeds a
   persistent, hand-editable preference profile used in every next digest.
-- **✉️ Optional email delivery** — via Resend; the app works fully without it.
+- **✉️ Optional email delivery** — via Resend or any standard SMTP server; the app works fully without it.
 - **🐳 Self-hosted with Docker Compose** — app, worker/scheduler, and a bundled
   Postgres, one `docker compose up` away. Bring your own LLM key — Anthropic
   (default), OpenAI, or any OpenAI-compatible server (Ollama, OpenRouter).
@@ -105,7 +105,7 @@ Postgres, the environment-variable table, schedules, and local development).
                     summary model: summaries + profile synthesis
                           digest model: the weekly digest
                                            │
-                               Resend (optional email)
+                          Resend or SMTP (optional email)
 ```
 
 The app talks to Postgres through a swappable storage abstraction
@@ -130,8 +130,8 @@ directly to the internet**. Secure it at the deployment level:
 Self-hosted, the stack runs on any small box or VPS you already have. The only
 thing that costs actual money is the LLM API — a few cents a week for the
 summaries and the digest (or nothing, if you point it at a local
-OpenAI-compatible server like Ollama). Email via Resend is optional and fits
-its free plan.
+OpenAI-compatible server like Ollama). Email is optional too — Resend fits its
+free plan, or use any SMTP server you already have.
 
 So: run it, fork it, tinker with it. Go for it. 🦉
 

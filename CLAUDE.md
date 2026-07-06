@@ -33,7 +33,7 @@ Keep lint, typecheck, and test green before finishing.
 - **No auth**: single-user; every route/API is open by design. Don't add login, sessions, or per-user scoping (the schema has no user column).
 - **LLM**: provider-agnostic via `lib/llm/` — `getLlm()` returns the provider selected by `LLM_PROVIDER` (`anthropic` or `openai`, the latter also covering OpenAI-compatible servers via `OPENAI_BASE_URL`). Providers implement a single `generateText` primitive; the shared JSON/retry loop lives in `lib/llm/call.ts`. Models from `LLM_MODEL_SUMMARY` / `LLM_MODEL_DIGEST` (per-provider defaults in `lib/llm/index.ts`).
 
-Environment variables are documented in `.env.example` (`DATABASE_URL`, `LLM_PROVIDER` + `ANTHROPIC_API_KEY`/`OPENAI_API_KEY`, `LLM_MODEL_*`, `DIGEST_*`, `INGEST_CRON`/`DIGEST_CRON`, Resend + `SITE_URL` for email).
+Environment variables are documented in `.env.example` (`DATABASE_URL`, `LLM_PROVIDER` + `ANTHROPIC_API_KEY`/`OPENAI_API_KEY`, `LLM_MODEL_*`, `DIGEST_*`, `INGEST_CRON`/`DIGEST_CRON`, `EMAIL_PROVIDER` + Resend/`SMTP_*` + `SITE_URL` for email — provider selection in `lib/email/`, mirroring `lib/llm/`).
 
 ## Deploy
 

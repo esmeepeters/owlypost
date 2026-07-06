@@ -13,7 +13,8 @@ You need: [Docker](https://docs.docker.com/get-docker/) with Compose, and an
 LLM API key — [Anthropic](https://platform.claude.com) (default) or
 [OpenAI](https://platform.openai.com) (also covers OpenAI-compatible servers
 such as Ollama or OpenRouter). Optionally a [Resend](https://resend.com)
-account for email delivery.
+account or any SMTP server (your mail provider, or a local relay) for email
+delivery.
 
 ## 1. Quick start
 
@@ -55,8 +56,13 @@ Copy `.env.example` for the full annotated list.
 | `DIGEST_TIMEZONE` | no | Timezone for the digest week window and the worker's schedules. Defaults to `UTC`. |
 | `INGEST_CRON` | no | Ingestion schedule (cron, in `DIGEST_TIMEZONE`). Defaults to `0 */6 * * *` (every 6 hours). |
 | `DIGEST_CRON` | no | Digest schedule (cron, in `DIGEST_TIMEZONE`). Defaults to `0 17 * * 0` (Sundays 17:00). |
-| `RESEND_API_KEY` | no | Leave empty to disable email. |
-| `DIGEST_EMAIL_FROM` | no | From address for digest emails (must be on a Resend-verified domain). |
+| `EMAIL_PROVIDER` | no | `resend` (default) or `smtp`. Email is disabled while the selected provider is not fully configured. |
+| `RESEND_API_KEY` | no | Resend API key (`EMAIL_PROVIDER=resend`). Leave empty to disable email. |
+| `SMTP_HOST` | no | SMTP server hostname (`EMAIL_PROVIDER=smtp`). Leave empty to disable email. |
+| `SMTP_PORT` | no | SMTP port, defaults to `587`. |
+| `SMTP_USER` / `SMTP_PASS` | no | SMTP credentials; leave empty for relays without authentication. |
+| `SMTP_SECURE` | no | `true` = implicit TLS from the first byte (the port 465 model), `false` = STARTTLS upgrade when the server offers it. Defaults to `true` on port 465, `false` otherwise. |
+| `DIGEST_EMAIL_FROM` | no | From address for digest emails (for Resend: must be on a Resend-verified domain). |
 | `DIGEST_EMAIL_TO` | no | Recipient for digest emails. |
 | `SITE_URL` | no | Public URL of your deployment; only used to build the app links in the digest email. |
 
@@ -68,6 +74,18 @@ Copy `.env.example` for the full annotated list.
 Inside the compose network, `docker-compose.yml` overrides `DATABASE_URL` to
 reach the `postgres` service by name, so the `DATABASE_URL` in `.env` is used
 for host-run commands (e.g. `pnpm migrate` / `pnpm seed`).
+
+### SMTP notes
+
+- The default (`SMTP_PORT=587`, `SMTP_SECURE=false`) starts plain and upgrades
+  to TLS via STARTTLS when the server supports it. That is right for
+  submission ports and local relays, but an active attacker on the path can
+  strip the upgrade — over untrusted networks, prefer `SMTP_PORT=465` with
+  `SMTP_SECURE=true` (TLS from the first byte).
+- The digest email is sent by the **worker** container. An SMTP relay running
+  on the Docker host is reachable from it as `host.docker.internal`, not
+  `localhost` (on Linux, add
+  `extra_hosts: ["host.docker.internal:host-gateway"]` to the worker service).
 
 ## 3. Using an external Postgres
 

@@ -2,7 +2,7 @@ import { format, startOfWeek } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { z } from "zod";
 import { getLlm, JsonCallError } from "./llm/index.ts";
-import { isEmailConfigured, sendDigestEmail } from "./email.ts";
+import { isEmailConfigured, sendDigestEmail } from "./email/index.ts";
 import { synthesizeProfile } from "./profile.ts";
 import type { Storage } from "./storage/index.ts";
 import type { DigestCandidate as DigestItemInput } from "./storage/types.ts";
@@ -269,7 +269,7 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
       week_end: weekEnd,
       status: "ready",
       intro_md: intro,
-      body: { intro_md: intro, sections: [], closing_md: "" },
+      body: { sections: [] },
     });
 
     if (isEmailConfigured()) {
@@ -278,8 +278,7 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
           digestId,
           weekStart,
           weekEnd,
-          introMd: intro,
-          closingMd: "",
+          quietMessage: intro,
           sections: [],
         });
         if (sent) {
@@ -399,8 +398,8 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
   );
   const insertedDigestItems = await storage.insertDigestItems(digestItems);
 
-  // 7. Email, only when Resend is configured; a delivery failure never fails
-  // the run — the digest simply stays at status ready.
+  // 7. Email, only when a delivery provider is configured; a delivery failure
+  // never fails the run — the digest simply stays at status ready.
   if (isEmailConfigured()) {
     try {
       const itemById = new Map(items.map((item) => [item.id, item]));
@@ -411,8 +410,6 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
         digestId,
         weekStart,
         weekEnd,
-        introMd: fixed.intro_md,
-        closingMd: fixed.closing_md,
         sections: fixed.sections.map((section) => ({
           category: section.category,
           narrativeMd: section.narrative_md,
