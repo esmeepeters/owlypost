@@ -48,7 +48,9 @@ export type Digest = {
   week_start: string;
   week_end: string;
   status: DigestStatus;
+  // Only written for quiet weeks (the short no-items message).
   intro_md: string | null;
+  // Legacy: column retained for old rows, no longer written.
   closing_md: string | null;
   body: unknown;
   model: string | null;
@@ -69,6 +71,16 @@ export type DigestItem = {
 export type Feedback = {
   id: string;
   digest_item_id: string;
+  rating: Rating;
+  comment: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SectionFeedback = {
+  id: string;
+  digest_id: string;
+  category: string;
   rating: Rating;
   comment: string | null;
   created_at: string;

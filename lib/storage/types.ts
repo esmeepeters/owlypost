@@ -11,6 +11,7 @@ import type {
   Feedback,
   Item,
   Rating,
+  SectionFeedback,
   Source,
   SourceStatus,
   Verdict,
@@ -54,10 +55,20 @@ export type FeedbackContext = {
   reason: string | null;
 };
 
-// A digest item joined with its item and (optional) feedback, for the digest
-// detail page.
+// Section feedback flattened with the digest week, used as prompt context for
+// the next digest and profile synthesis.
+export type SectionFeedbackContext = {
+  rating: Rating;
+  comment: string | null;
+  category: string;
+  week_start: string;
+};
+
+// A digest item joined with its item (plus source title) and (optional)
+// feedback, for the digest detail page.
 export type DigestItemDetail = DigestItem & {
   item: Item | null;
+  source_title: string | null;
   feedback: Feedback | null;
 };
 
@@ -96,8 +107,8 @@ export type DigestInsert = {
   week_start: string;
   week_end: string;
   status: DigestStatus;
+  // Only used for the quiet-week message.
   intro_md?: string | null;
-  closing_md?: string | null;
   body?: unknown;
   model?: string | null;
   token_usage?: unknown;
@@ -205,6 +216,17 @@ export interface Storage {
   ): Promise<void>;
   listRecentFeedback(limit: number): Promise<FeedbackContext[]>;
   listFeedbackSince(iso: string): Promise<FeedbackContext[]>;
+
+  // section feedback
+  upsertSectionFeedback(
+    digestId: string,
+    category: string,
+    rating: Rating,
+    comment: string | null,
+  ): Promise<void>;
+  listSectionFeedbackForDigest(digestId: string): Promise<SectionFeedback[]>;
+  listRecentSectionFeedback(limit: number): Promise<SectionFeedbackContext[]>;
+  listSectionFeedbackSince(iso: string): Promise<SectionFeedbackContext[]>;
 
   // preference profile
   getProfile(): Promise<{ profile_md: string; updated_at: string } | null>;

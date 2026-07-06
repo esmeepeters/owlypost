@@ -3,6 +3,7 @@ import type {
   Category,
   Digest,
   DigestStatus,
+  SectionFeedback,
   Source,
   SourceStatus,
 } from "../types.ts";
@@ -18,6 +19,7 @@ import type {
   ItemRange,
   NewItem,
   PendingItem,
+  SectionFeedbackContext,
   SourceInput,
   Storage,
 } from "./types.ts";
@@ -459,9 +461,11 @@ export class PostgresStorage implements Storage {
     const { rows } = await this.#pool.query<DigestItemDetail>(
       `select di.id, di.digest_id, di.item_id, di.verdict, di.reason, di.rank,
               case when it.id is null then null else row_to_json(it) end as item,
+              s.title as source_title,
               case when fb.id is null then null else row_to_json(fb) end as feedback
          from digest_items di
          left join items it on it.id = di.item_id
+         left join sources s on s.id = it.source_id
          left join feedback fb on fb.digest_item_id = di.id
         where di.digest_id = $1`,
       [digestId],
@@ -506,6 +510,61 @@ export class PostgresStorage implements Storage {
          left join items i on i.id = di.item_id
         where f.created_at > $1
         order by f.created_at asc`,
+      [iso],
+    );
+    return rows;
+  }
+
+  // section feedback
+
+  async upsertSectionFeedback(
+    digestId: string,
+    category: string,
+    rating: string,
+    comment: string | null,
+  ): Promise<void> {
+    await this.#pool.query(
+      `insert into section_feedback (digest_id, category, rating, comment, updated_at)
+       values ($1, $2, $3, $4, now())
+       on conflict (digest_id, category)
+       do update set rating = excluded.rating, comment = excluded.comment, updated_at = now()`,
+      [digestId, category, rating, comment],
+    );
+  }
+
+  async listSectionFeedbackForDigest(
+    digestId: string,
+  ): Promise<SectionFeedback[]> {
+    const { rows } = await this.#pool.query<SectionFeedback>(
+      `select * from section_feedback where digest_id = $1`,
+      [digestId],
+    );
+    return rows;
+  }
+
+  async listRecentSectionFeedback(
+    limit: number,
+  ): Promise<SectionFeedbackContext[]> {
+    const { rows } = await this.#pool.query<SectionFeedbackContext>(
+      `select sf.rating, sf.comment, sf.category, d.week_start::text as week_start
+         from section_feedback sf
+         join digests d on d.id = sf.digest_id
+        order by sf.created_at desc
+        limit $1`,
+      [limit],
+    );
+    return rows;
+  }
+
+  async listSectionFeedbackSince(
+    iso: string,
+  ): Promise<SectionFeedbackContext[]> {
+    const { rows } = await this.#pool.query<SectionFeedbackContext>(
+      `select sf.rating, sf.comment, sf.category, d.week_start::text as week_start
+         from section_feedback sf
+         join digests d on d.id = sf.digest_id
+        where sf.created_at > $1
+        order by sf.created_at asc`,
       [iso],
     );
     return rows;
