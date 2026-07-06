@@ -91,7 +91,6 @@ export function capItemsProportionally<
 }
 
 const digestSchema = z.object({
-  intro_md: z.string().min(1),
   sections: z.array(
     z.object({
       category: z.string(),
@@ -105,7 +104,6 @@ const digestSchema = z.object({
       ),
     }),
   ),
-  closing_md: z.string(),
 });
 
 export type DigestBody = z.infer<typeof digestSchema>;
@@ -177,6 +175,7 @@ function buildPrompt(options: {
   const system = [
     `You are the editor of a personal weekly reading digest: sharp, opinionated, allergic to hype, and focused on saving your reader time.`,
     `You write in the language with code "${language}".`,
+    `Each category summary is a self-contained mini-newsletter: after reading it alone, the reader is fully up to date on that category without opening a single item.`,
     `You know the reader well; their preference profile and recent feedback are provided.`,
     `Verdicts: "must_read" is rare and precious, "worth_it" is solid, "skip" is honest. Be decisive.`,
   ].join(" ");
@@ -221,17 +220,15 @@ function buildPrompt(options: {
     [
       "Write the weekly digest as JSON matching exactly this shape:",
       `{`,
-      `  "intro_md": "editorial summary of the week across all sources, at most 300 words, in ${language} — scale it down when the week has few items; never pad",`,
       `  "sections": [`,
       `    {`,
       `      "category": "category name",`,
-      `      "narrative_md": "a complete markdown summary of this category, at most 250 words and proportional to the number and substance of the items (a category with one or two items needs only a short paragraph), covering everything the reader needs to know from this week's items so they are up to date without reading them",`,
+      `      "narrative_md": "the category's newsletter text in markdown. Inform, never tease: state what actually happened — the concrete facts, figures and conclusions from the item summaries — so the reader is fully up to date without opening anything; never write 'X covers Y' without giving the substance. Flowing prose that groups related items into mini-themes rather than walking through items one by one, with sparing **bold** for the most important developments. No markdown links — the item list below the summary carries them. Length is proportional to substance: roughly 40-60 words per item, at most ~500 words per category; one or two items need only a short paragraph",`,
       `      "items": [`,
       `        { "item_id": "uuid", "verdict": "must_read | worth_it | skip", "reason": "one sentence" }`,
       `      ]`,
       `    }`,
-      `  ],`,
-      `  "closing_md": "one short paragraph"`,
+      `  ]`,
       `}`,
       "",
       "Every item_id from the list above must appear exactly once across all sections.",
@@ -379,8 +376,6 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
     week_start: weekStart,
     week_end: weekEnd,
     status: "ready",
-    intro_md: fixed.intro_md,
-    closing_md: fixed.closing_md,
     body: { sections: fixed.sections },
     model,
     token_usage: usage,

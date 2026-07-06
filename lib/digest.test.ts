@@ -67,8 +67,6 @@ test("capItemsProportionally caps proportionally per source", () => {
 });
 
 const baseBody: DigestBody = {
-  intro_md: "intro",
-  closing_md: "closing",
   sections: [
     {
       category: "Tech",
