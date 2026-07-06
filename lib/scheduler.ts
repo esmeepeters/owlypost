@@ -7,6 +7,12 @@ const INGEST_CRON = process.env.INGEST_CRON || "0 */6 * * *";
 const DIGEST_CRON = process.env.DIGEST_CRON || "0 17 * * 0";
 const TIMEZONE = process.env.DIGEST_TIMEZONE || "UTC";
 
+// How late a delayed tick may still fire instead of being dropped (node-cron's
+// default is 1s, which silently skips runs whenever the host hiccups at the
+// scheduled second). Runs delayed longer than this are skipped until the next
+// scheduled slot.
+const MISSED_TOLERANCE_MS = 10 * 60 * 1000;
+
 // Starts the in-process scheduler. node-cron's noOverlap prevents a slow run
 // from overlapping the next tick. Errors are logged, never thrown, so one bad
 // run does not kill the scheduler.
@@ -29,7 +35,12 @@ export function startScheduler(): void {
         console.error("Scheduled ingest failed:", error);
       }
     },
-    { timezone: TIMEZONE, noOverlap: true, name: "ingest" },
+    {
+      timezone: TIMEZONE,
+      noOverlap: true,
+      name: "ingest",
+      missedExecutionTolerance: MISSED_TOLERANCE_MS,
+    },
   );
 
   schedule(
@@ -41,7 +52,12 @@ export function startScheduler(): void {
         console.error("Scheduled digest failed:", error);
       }
     },
-    { timezone: TIMEZONE, noOverlap: true, name: "digest" },
+    {
+      timezone: TIMEZONE,
+      noOverlap: true,
+      name: "digest",
+      missedExecutionTolerance: MISSED_TOLERANCE_MS,
+    },
   );
 
   console.log(
