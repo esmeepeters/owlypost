@@ -28,8 +28,6 @@ export type EmailDigest = {
   digestId: string;
   weekStart: string;
   weekEnd: string;
-  // Only set for quiet weeks (no sections): the short no-items message.
-  quietMessage?: string;
   sections: {
     category: string;
     narrativeMd: string;

@@ -109,7 +109,7 @@ export type DigestInsert = {
   week_start: string;
   week_end: string;
   status: DigestStatus;
-  // Only used for the quiet-week message.
+  // Only used for the empty-digest message.
   intro_md?: string | null;
   body?: unknown;
   model?: string | null;

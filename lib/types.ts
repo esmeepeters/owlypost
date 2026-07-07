@@ -2,7 +2,7 @@
 // small and there is no generated-types pipeline.
 
 export type SourceStatus = "active" | "paused" | "error";
-export type DigestStatus = "draft" | "ready" | "sent" | "failed";
+export type DigestStatus = "draft" | "ready" | "sent" | "failed" | "empty";
 export type Verdict = "must_read" | "worth_it" | "skip";
 export type Rating = "up" | "down";
 
@@ -48,7 +48,7 @@ export type Digest = {
   week_start: string;
   week_end: string;
   status: DigestStatus;
-  // Only written for quiet weeks (the short no-items message).
+  // Only written for empty digests (the short no-items message).
   intro_md: string | null;
   // Legacy: column retained for old rows, no longer written.
   closing_md: string | null;

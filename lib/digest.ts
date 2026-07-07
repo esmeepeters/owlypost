@@ -20,7 +20,7 @@ const DIGEST_MAX_TOKENS = 24576;
 
 export type DigestRunResult = {
   digestId: string | null;
-  status: "ready" | "failed" | "quiet";
+  status: "ready" | "failed" | "empty";
 };
 
 export function weekWindow(now: Date, timeZone: string) {
@@ -264,10 +264,10 @@ function buildPrompt(options: {
   return { system, prompt: lines.join("\n") };
 }
 
-function quietWeekIntro(language: string): string {
+function emptyDigestIntro(language: string): string {
   return language === "nl"
-    ? "Deze week niets te melden: je bronnen hebben geen nieuwe items gepubliceerd. De volgende digest pikt de draad weer op."
-    : "Nothing to show this week: your sources published no new items. The next digest will cover whatever comes in.";
+    ? "Geen nieuwe items deze periode. Je bronnen hebben niets nieuws gepubliceerd sinds de laatste update."
+    : "No new items this period. Your sources haven't published anything new since the last update.";
 }
 
 export async function runDigest(storage: Storage): Promise<DigestRunResult> {
@@ -282,35 +282,17 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
   // eligible for the next one, and a re-run after success finds nothing.
   const allItems = await storage.getUndigestedItems(eligibilityRange(now));
 
-  // 2. Quiet week: store a short digest, email it, and stop.
+  // 2. Nothing new: store an empty digest and stop — no email for these.
   if (allItems.length === 0) {
-    const intro = quietWeekIntro(language);
     const { id: digestId } = await storage.insertDigest({
       week_start: weekStart,
       week_end: weekEnd,
-      status: "ready",
-      intro_md: intro,
+      status: "empty",
+      intro_md: emptyDigestIntro(language),
       body: { sections: [] },
     });
 
-    if (isEmailConfigured()) {
-      try {
-        const sent = await sendDigestEmail({
-          digestId,
-          weekStart,
-          weekEnd,
-          quietMessage: intro,
-          sections: [],
-        });
-        if (sent) {
-          await storage.updateDigestStatus(digestId, "sent");
-        }
-      } catch (error) {
-        console.error("Digest email failed:", error);
-      }
-    }
-
-    return { digestId, status: "quiet" };
+    return { digestId, status: "empty" };
   }
 
   const items = capItemsProportionally(allItems, ITEM_CAP);

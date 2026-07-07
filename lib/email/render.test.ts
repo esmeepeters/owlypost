@@ -99,18 +99,3 @@ test("a trailing slash in the site URL does not double up in links", () => {
   assert.ok(html.includes("http://localhost:3000/digests/d1"));
   assert.ok(!html.includes("http://localhost:3000//"));
 });
-
-test("quiet week renders the message and no sections", () => {
-  const html = renderDigestEmailHtml(
-    {
-      digestId: "d2",
-      weekStart: "2026-07-06",
-      weekEnd: "2026-07-12",
-      quietMessage: "Nothing to show this week.",
-      sections: [],
-    },
-    "http://localhost:3000",
-  );
-  assert.ok(html.includes("Nothing to show this week."));
-  assert.ok(!html.includes("<h2"));
-});

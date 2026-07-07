@@ -92,7 +92,6 @@ export function renderDigestEmailHtml(
     <div style="max-width:600px; margin:0 auto; padding:32px 20px; font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif; color:#171717; background:#ffffff;">
       <p style="font-size:13px; color:#b45309; font-weight:600; margin:0 0 4px 0;">🦉 Owly Post</p>
       <h1 style="font-size:21px; margin:0 0 20px 0;">${escapeHtml(formatWeekRange(digest.weekStart, digest.weekEnd, language))}</h1>
-      ${digest.quietMessage ? `<div style="font-size:15px;">${mdToHtml(digest.quietMessage)}</div>` : ""}
       ${sectionsHtml}
       <p style="margin-top:24px; font-size:12px; color:#a3a3a3;">
         <a href="${digestUrl}" style="color:#b45309;">Open this digest in Owly Post</a>

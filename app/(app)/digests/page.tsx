@@ -11,6 +11,7 @@ const STATUS_STYLES: Record<Digest["status"], string> = {
   ready: "bg-green-50 text-green-700 border-green-200",
   sent: "bg-blue-50 text-blue-700 border-blue-200",
   failed: "bg-red-50 text-red-700 border-red-200",
+  empty: "bg-neutral-50 text-neutral-500 border-neutral-200",
 };
 
 export default async function DigestsPage() {
