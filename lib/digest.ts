@@ -247,7 +247,7 @@ function buildPrompt(options: {
       `  "sections": [`,
       `    {`,
       `      "category": "category name",`,
-      `      "narrative_md": "the category's newsletter text in markdown. Inform, never tease: state what actually happened — the concrete facts, figures and conclusions from the item summaries — so the reader is fully up to date without opening anything; never write 'X covers Y' without giving the substance. Flowing prose that groups related items into mini-themes rather than walking through items one by one, with sparing **bold** for the most important developments. No markdown links — the item list below the summary carries them. Length is proportional to substance: roughly 40-60 words per item, at most ~500 words per category; one or two items need only a short paragraph",`,
+      `      "narrative_md": "the category's newsletter text in markdown. Inform, never tease: state what actually happened — the concrete facts, figures and conclusions from the item summaries — so the reader is fully up to date without opening anything; never write 'X covers Y' without giving the substance. Flowing prose that groups related items into mini-themes rather than walking through items one by one, with sparing **bold** for the most important developments. No markdown links — the item list below the summary carries them. Write only about the content of the items — never comment on the week itself (volume, pace, how thin or busy it was), on the number of items, or on the digest/selection process; open directly with the substance. Length is proportional to substance: roughly 40-60 words per item, at most ~500 words per category; one or two items need only a short paragraph",`,
       `      "items": [`,
       `        { "item_id": "uuid", "verdict": "must_read | worth_it | skip", "reason": "one sentence" }`,
       `      ]`,
@@ -257,7 +257,7 @@ function buildPrompt(options: {
       "",
       "Every item_id from the list above must appear exactly once across all sections.",
       "Use the category names as given. All prose in the digest language.",
-      "Match length to substance: with few items, keep the digest short rather than padding it.",
+      "Match length to substance: with few items, keep the digest short rather than padding it — and never remark on the low volume.",
     ].join("\n"),
   );
 
