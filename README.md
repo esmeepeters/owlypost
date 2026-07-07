@@ -90,7 +90,7 @@ Postgres, the environment-variable table, schedules, and local development).
    you ────────▶│  app (Next.js)                    worker                       │
                 │  /inbox /sources                  node-cron scheduler          │
                 │  /digests /settings               ingest (INGEST_CRON)         │
-                │        │        ▲                  digest (DIGEST_CRON)         │
+                │        │        ▲                  digest (set in Settings)    │
                 │        │        │ "Fetch now" /        │                       │
                 │        │        │ "Generate now"       │  both call the same   │
                 │        └────────┴──────────────────────┤  jobs in lib/jobs.ts  │

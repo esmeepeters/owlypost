@@ -1,10 +1,17 @@
 import { schedule, validate } from "node-cron";
+import type { ScheduledTask } from "node-cron";
 import { runDigestJob, runIngestJob } from "./jobs.ts";
+import {
+  DEFAULT_DIGEST_SCHEDULE,
+  describeSchedule,
+  toCronExpression,
+} from "./digest-schedule.ts";
+import { getStorage } from "./storage/index.ts";
 
-// Cron schedules, configurable via env: ingest every 6 hours, digest on Sunday
-// at 17:00. Evaluated in DIGEST_TIMEZONE, so the digest lands at 17:00 local.
+// Ingest schedule, configurable via env: every 6 hours by default. The digest
+// schedule lives in the database (digest_schedule table, editable in
+// Settings) and is polled below. Both are evaluated in DIGEST_TIMEZONE.
 const INGEST_CRON = process.env.INGEST_CRON || "0 */6 * * *";
-const DIGEST_CRON = process.env.DIGEST_CRON || "0 17 * * 0";
 const TIMEZONE = process.env.DIGEST_TIMEZONE || "UTC";
 
 // How late a delayed tick may still fire instead of being dropped (node-cron's
@@ -13,17 +20,51 @@ const TIMEZONE = process.env.DIGEST_TIMEZONE || "UTC";
 // scheduled slot.
 const MISSED_TOLERANCE_MS = 10 * 60 * 1000;
 
+// How often the worker re-reads the digest schedule from the database, so a
+// change made in Settings takes effect without a restart.
+const SCHEDULE_POLL_MS = 60_000;
+
+let digestTask: ScheduledTask | null = null;
+let digestCron: string | null = null;
+
+// Reads the digest schedule and re-creates the cron task when it changed.
+// destroy() removes the old task from node-cron's registry, so the "digest"
+// name can be reused. In steady state (no change) this is a no-op.
+async function syncDigestSchedule(): Promise<void> {
+  const setting =
+    (await getStorage().getDigestSchedule()) ?? DEFAULT_DIGEST_SCHEDULE;
+  const expression = toCronExpression(setting);
+  if (expression === digestCron) return;
+
+  digestTask?.destroy();
+  digestTask = schedule(
+    expression,
+    async () => {
+      try {
+        await runDigestJob();
+      } catch (error) {
+        console.error("Scheduled digest failed:", error);
+      }
+    },
+    {
+      timezone: TIMEZONE,
+      noOverlap: true,
+      name: "digest",
+      missedExecutionTolerance: MISSED_TOLERANCE_MS,
+    },
+  );
+  digestCron = expression;
+  console.log(
+    `Digest scheduled ${describeSchedule(setting)} ("${expression}", ${TIMEZONE}).`,
+  );
+}
+
 // Starts the in-process scheduler. node-cron's noOverlap prevents a slow run
 // from overlapping the next tick. Errors are logged, never thrown, so one bad
 // run does not kill the scheduler.
-export function startScheduler(): void {
-  for (const [expression, label] of [
-    [INGEST_CRON, "INGEST_CRON"],
-    [DIGEST_CRON, "DIGEST_CRON"],
-  ] as const) {
-    if (!validate(expression)) {
-      throw new Error(`Invalid ${label} cron expression: "${expression}"`);
-    }
+export async function startScheduler(): Promise<void> {
+  if (!validate(INGEST_CRON)) {
+    throw new Error(`Invalid INGEST_CRON cron expression: "${INGEST_CRON}"`);
   }
 
   schedule(
@@ -43,24 +84,19 @@ export function startScheduler(): void {
     },
   );
 
-  schedule(
-    DIGEST_CRON,
-    async () => {
-      try {
-        await runDigestJob();
-      } catch (error) {
-        console.error("Scheduled digest failed:", error);
-      }
-    },
-    {
-      timezone: TIMEZONE,
-      noOverlap: true,
-      name: "digest",
-      missedExecutionTolerance: MISSED_TOLERANCE_MS,
-    },
-  );
+  // The first sync may throw (startup with an unreachable database should be
+  // loud); afterwards a failed poll keeps the current schedule and only logs.
+  await syncDigestSchedule();
+  setInterval(() => {
+    syncDigestSchedule().catch((error) => {
+      console.error(
+        "Digest schedule poll failed; keeping current schedule:",
+        error,
+      );
+    });
+  }, SCHEDULE_POLL_MS);
 
   console.log(
-    `Scheduler started (timezone ${TIMEZONE}): ingest "${INGEST_CRON}", digest "${DIGEST_CRON}".`,
+    `Scheduler started (timezone ${TIMEZONE}): ingest "${INGEST_CRON}".`,
   );
 }

@@ -77,6 +77,17 @@ export type Feedback = {
   updated_at: string;
 };
 
+export type DigestFrequency = "daily" | "weekly";
+
+export type DigestSchedule = {
+  frequency: DigestFrequency;
+  // Cron convention (0 = Sunday); ignored when frequency is "daily".
+  day_of_week: number;
+  hour: number;
+  minute: number;
+  updated_at: string;
+};
+
 export type SectionFeedback = {
   id: string;
   digest_id: string;

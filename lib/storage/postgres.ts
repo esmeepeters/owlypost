@@ -2,6 +2,8 @@ import { getPool } from "./pool.ts";
 import type {
   Category,
   Digest,
+  DigestFrequency,
+  DigestSchedule,
   DigestStatus,
   SectionFeedback,
   Source,
@@ -594,6 +596,31 @@ export class PostgresStorage implements Storage {
     await this.#pool.query(
       `update preference_profile set profile_md = $1 where id = 1`,
       [profileMd],
+    );
+  }
+
+  // digest schedule
+
+  async getDigestSchedule(): Promise<DigestSchedule | null> {
+    const { rows } = await this.#pool.query<DigestSchedule>(
+      `select frequency, day_of_week, hour, minute, updated_at
+         from digest_schedule where id = 1`,
+    );
+    return rows[0] ?? null;
+  }
+
+  async updateDigestSchedule(input: {
+    frequency: DigestFrequency;
+    day_of_week: number;
+    hour: number;
+    minute: number;
+  }): Promise<void> {
+    await this.#pool.query(
+      `update digest_schedule
+          set frequency = $1, day_of_week = $2, hour = $3, minute = $4,
+              updated_at = now()
+        where id = 1`,
+      [input.frequency, input.day_of_week, input.hour, input.minute],
     );
   }
 }

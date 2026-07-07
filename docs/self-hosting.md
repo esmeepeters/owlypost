@@ -54,8 +54,7 @@ Copy `.env.example` for the full annotated list.
 | `LLM_MODEL_SUMMARY` | no | Summary/profile model. Defaults per provider: `claude-haiku-4-5` / `gpt-5-mini`. |
 | `DIGEST_LANGUAGE` | no | Digest language, defaults to `en` (English). |
 | `DIGEST_TIMEZONE` | no | Timezone for the digest week window and the worker's schedules. Defaults to `UTC`. |
-| `INGEST_CRON` | no | Ingestion schedule (cron, in `DIGEST_TIMEZONE`). Defaults to `0 */6 * * *` (every 6 hours). |
-| `DIGEST_CRON` | no | Digest schedule (cron, in `DIGEST_TIMEZONE`). Defaults to `0 17 * * 0` (Sundays 17:00). |
+| `INGEST_CRON` | no | Ingestion schedule (cron, in `DIGEST_TIMEZONE`). Defaults to `0 */6 * * *` (every 6 hours). The digest schedule is not an env var — configure it in the app under Settings. |
 | `EMAIL_PROVIDER` | no | `resend` (default) or `smtp`. Email is disabled while the selected provider is not fully configured. |
 | `RESEND_API_KEY` | no | Resend API key (`EMAIL_PROVIDER=resend`). Leave empty to disable email. |
 | `SMTP_HOST` | no | SMTP server hostname (`EMAIL_PROVIDER=smtp`). Leave empty to disable email. |
@@ -108,9 +107,11 @@ for access control at the deployment level:
 
 ## Schedules
 
-The worker runs ingestion and the digest on the `INGEST_CRON` / `DIGEST_CRON`
-schedules, evaluated in `DIGEST_TIMEZONE`. Change them in `.env` and restart the
-worker: `docker compose up -d worker`.
+The worker runs ingestion on the `INGEST_CRON` schedule; change it in `.env` and
+restart the worker: `docker compose up -d worker`. The digest schedule
+(daily or weekly, day and time) is configured in the app under **Settings** and
+stored in the database; the worker picks up changes within a minute, no restart
+needed. Both schedules are evaluated in `DIGEST_TIMEZONE`.
 
 ## Migrations
 

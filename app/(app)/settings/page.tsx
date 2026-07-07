@@ -1,13 +1,20 @@
+import { DEFAULT_DIGEST_SCHEDULE } from "@/lib/digest-schedule";
 import { emailDeliveryStatus } from "@/lib/email";
 import { formatShortDateTime } from "@/lib/format";
 import { getStorage } from "@/lib/storage";
+import { DigestScheduleEditor } from "@/components/digest-schedule-editor";
 import { ProfileEditor } from "@/components/profile-editor";
 import { TriggerButton } from "@/components/trigger-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const profile = await getStorage().getProfile();
+  const storage = getStorage();
+  const [profile, schedule] = await Promise.all([
+    storage.getProfile(),
+    storage.getDigestSchedule(),
+  ]);
+  const digestSchedule = schedule ?? DEFAULT_DIGEST_SCHEDULE;
 
   const email = emailDeliveryStatus();
 
@@ -48,18 +55,25 @@ export default async function SettingsPage() {
               {process.env.INGEST_CRON || "0 */6 * * *"}
             </code>
           </dd>
-          <dt className="text-neutral-500">Weekly digest</dt>
-          <dd>
-            <code className="text-xs">
-              {process.env.DIGEST_CRON || "0 17 * * 0"}
-            </code>
-          </dd>
         </dl>
         <p className="mt-2 text-xs text-neutral-400">
-          The worker runs these cron schedules in {process.env.DIGEST_TIMEZONE ||
-            "Europe/Amsterdam"}
-          ; set <code>INGEST_CRON</code> / <code>DIGEST_CRON</code> in your{" "}
-          <code>.env</code> and restart to change them.
+          Ingestion runs on <code>INGEST_CRON</code>; set it in your{" "}
+          <code>.env</code> and restart to change it.
+        </p>
+        <h3 className="mt-4 text-sm font-medium">Digest delivery</h3>
+        <div className="mt-2">
+          <DigestScheduleEditor
+            initialSchedule={{
+              frequency: digestSchedule.frequency,
+              dayOfWeek: digestSchedule.day_of_week,
+              hour: digestSchedule.hour,
+              minute: digestSchedule.minute,
+            }}
+          />
+        </div>
+        <p className="mt-2 text-xs text-neutral-400">
+          Times are in {process.env.DIGEST_TIMEZONE || "UTC"}; changes take
+          effect within a minute, no restart needed.
         </p>
         <div className="mt-3 flex gap-3">
           <TriggerButton

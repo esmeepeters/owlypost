@@ -6,7 +6,9 @@
 import type {
   Category,
   Digest,
+  DigestFrequency,
   DigestItem,
+  DigestSchedule,
   DigestStatus,
   Feedback,
   Item,
@@ -232,4 +234,13 @@ export interface Storage {
   getProfile(): Promise<{ profile_md: string; updated_at: string } | null>;
   updateProfileSynthesis(profileMd: string): Promise<void>;
   updateProfileManual(profileMd: string): Promise<void>;
+
+  // digest schedule
+  getDigestSchedule(): Promise<DigestSchedule | null>;
+  updateDigestSchedule(input: {
+    frequency: DigestFrequency;
+    day_of_week: number;
+    hour: number;
+    minute: number;
+  }): Promise<void>;
 }

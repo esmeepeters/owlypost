@@ -12,7 +12,7 @@ async function main() {
       ? `Applied ${applied.length} migration(s).`
       : "Database schema is up to date.",
   );
-  startScheduler();
+  await startScheduler();
   // node-cron keeps the event loop alive; the process stays up until stopped.
 }
 
