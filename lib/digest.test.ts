@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   capItemsProportionally,
+  digestWindow,
   eligibilityRange,
   fixupSections,
   weekWindow,
@@ -23,6 +24,28 @@ test("weekWindow handles the timezone date boundary", () => {
   const now = new Date("2026-06-07T23:30:00Z");
   const { weekStart } = weekWindow(now, "Europe/Amsterdam");
   assert.equal(weekStart, "2026-06-08");
+});
+
+test("digestWindow delegates to the week window for weekly", () => {
+  const now = new Date("2026-06-11T10:00:00Z");
+  assert.deepEqual(
+    digestWindow(now, "Europe/Amsterdam", "weekly"),
+    weekWindow(now, "Europe/Amsterdam"),
+  );
+});
+
+test("digestWindow uses a single zoned day for daily", () => {
+  // Sunday 23:30 UTC is already Monday 01:30 in Amsterdam.
+  const now = new Date("2026-06-07T23:30:00Z");
+  const { startUtc, weekStart, weekEnd } = digestWindow(
+    now,
+    "Europe/Amsterdam",
+    "daily",
+  );
+  assert.equal(weekStart, "2026-06-08");
+  assert.equal(weekEnd, "2026-06-08");
+  // Monday 00:00 Amsterdam (CEST, UTC+2) = Sunday 22:00 UTC.
+  assert.equal(startUtc.toISOString(), "2026-06-07T22:00:00.000Z");
 });
 
 test("eligibilityRange spans the default 30 days up to now", () => {

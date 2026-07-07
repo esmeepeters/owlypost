@@ -53,7 +53,7 @@ export async function sendDigestEmail(digest: EmailDigest): Promise<boolean> {
     await createProvider(config).send({
       from: config.from,
       to: config.to,
-      subject: `🦉 Owly Post — ${formatWeekSubject(digest.weekStart, process.env.DIGEST_LANGUAGE || "en")}`,
+      subject: `🦉 Owly Post — ${formatWeekSubject(digest.weekStart, digest.weekEnd, process.env.DIGEST_LANGUAGE || "en")}`,
       html: renderDigestEmailHtml(digest, siteUrl),
     });
     return true;

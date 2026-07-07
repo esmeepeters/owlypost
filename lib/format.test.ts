@@ -40,7 +40,29 @@ test("formatWeekRange falls back to English labels for unknown languages", () =>
   );
 });
 
+test("formatWeekRange collapses a single-day (daily digest) range", () => {
+  assert.equal(
+    formatWeekRange("2026-07-07", "2026-07-07", "en"),
+    "Digest of 2026-07-07",
+  );
+  assert.equal(
+    formatWeekRange("2026-07-07", "2026-07-07", "nl"),
+    "Digest van 07-07-2026",
+  );
+});
+
 test("formatWeekSubject renders the lowercase variant per language", () => {
-  assert.equal(formatWeekSubject("2026-06-29", "en"), "week of 2026-06-29");
-  assert.equal(formatWeekSubject("2026-06-29", "nl"), "week van 29-06-2026");
+  assert.equal(
+    formatWeekSubject("2026-06-29", "2026-07-05", "en"),
+    "week of 2026-06-29",
+  );
+  assert.equal(
+    formatWeekSubject("2026-06-29", "2026-07-05", "nl"),
+    "week van 29-06-2026",
+  );
+});
+
+test("formatWeekSubject renders the bare date for a single-day range", () => {
+  assert.equal(formatWeekSubject("2026-07-07", "2026-07-07", "en"), "2026-07-07");
+  assert.equal(formatWeekSubject("2026-07-07", "2026-07-07", "nl"), "07-07-2026");
 });

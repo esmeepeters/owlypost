@@ -1,9 +1,10 @@
-import { format, startOfWeek } from "date-fns";
+import { format, startOfDay, startOfWeek } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { z } from "zod";
 import { getLlm, JsonCallError } from "./llm/index.ts";
 import { isEmailConfigured, sendDigestEmail } from "./email/index.ts";
 import { synthesizeProfile } from "./profile.ts";
+import type { DigestFrequency } from "./types.ts";
 import type { Storage } from "./storage/index.ts";
 import type { DigestCandidate as DigestItemInput } from "./storage/types.ts";
 
@@ -30,6 +31,24 @@ export function weekWindow(now: Date, timeZone: string) {
     startUtc: fromZonedTime(zonedStart, timeZone),
     weekStart: format(zonedStart, "yyyy-MM-dd"),
     weekEnd: format(zonedNow, "yyyy-MM-dd"),
+  };
+}
+
+// The digest's display window. A weekly digest is labelled Monday-to-now; a
+// daily one carries today's date as both start and end, which the formatters
+// in format.ts collapse to a single date.
+export function digestWindow(
+  now: Date,
+  timeZone: string,
+  frequency: DigestFrequency,
+) {
+  if (frequency === "weekly") return weekWindow(now, timeZone);
+  const zonedNow = toZonedTime(now, timeZone);
+  const day = format(zonedNow, "yyyy-MM-dd");
+  return {
+    startUtc: fromZonedTime(startOfDay(zonedNow), timeZone),
+    weekStart: day,
+    weekEnd: day,
   };
 }
 
@@ -274,7 +293,9 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
   const timeZone = process.env.DIGEST_TIMEZONE || "UTC";
   const language = process.env.DIGEST_LANGUAGE || "en";
   const now = new Date();
-  const { weekStart, weekEnd } = weekWindow(now, timeZone);
+  const frequency =
+    (await storage.getDigestSchedule())?.frequency ?? "weekly";
+  const { weekStart, weekEnd } = digestWindow(now, timeZone, frequency);
 
   // 1. Collect everything not yet included in a digest (by published_at,
   // falling back to fetched_at), capped in age. Membership in digest_items is
