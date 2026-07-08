@@ -23,6 +23,14 @@ export async function runCleanupJob(): Promise<RetentionStats> {
 }
 
 export async function runDigestJob(): Promise<DigestRunResult> {
+  // Ingest first so the digest sees items published since the last scheduled
+  // ingest tick — on a host that sleeps (laptop), ticks are routinely missed.
+  // A failed ingest must never block the digest; run with what is stored.
+  try {
+    await runIngestJob();
+  } catch (error) {
+    console.error("Pre-digest ingest failed; continuing with digest:", error);
+  }
   const result = await runDigest(getStorage());
   console.log("Digest run finished:", JSON.stringify(result));
   return result;
