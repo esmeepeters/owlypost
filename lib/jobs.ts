@@ -4,13 +4,21 @@
 // into. They depend on nothing environment-specific.
 import { runDigest } from "./digest.ts";
 import { runIngest } from "./ingest.ts";
+import { runRetention } from "./retention.ts";
 import { getStorage } from "./storage/index.ts";
 import type { DigestRunResult } from "./digest.ts";
 import type { IngestStats } from "./ingest.ts";
+import type { RetentionStats } from "./retention.ts";
 
 export async function runIngestJob(): Promise<IngestStats> {
   const stats = await runIngest(getStorage());
   console.log("Ingest run finished:", JSON.stringify(stats));
+  return stats;
+}
+
+export async function runCleanupJob(): Promise<RetentionStats> {
+  const stats = await runRetention(getStorage());
+  console.log("Cleanup run finished:", JSON.stringify(stats));
   return stats;
 }
 

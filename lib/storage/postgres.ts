@@ -309,6 +309,17 @@ export class PostgresStorage implements Storage {
     return result.rowCount ?? 0;
   }
 
+  async stripItemContentBefore(iso: string): Promise<number> {
+    const result = await this.#pool.query(
+      `update items set content_text = null
+        where content_text is not null
+          and summary is not null
+          and fetched_at < $1`,
+      [iso],
+    );
+    return result.rowCount ?? 0;
+  }
+
   async countItemsSince(iso: string): Promise<number> {
     const { rows } = await this.#pool.query<{ n: number }>(
       `select count(*)::int as n from items where fetched_at >= $1`,
@@ -432,6 +443,17 @@ export class PostgresStorage implements Storage {
       [id],
     );
     return rows[0] ?? null;
+  }
+
+  async clearFailedDigestRawResponses(iso: string): Promise<number> {
+    const result = await this.#pool.query(
+      `update digests set raw_response = null
+        where status = 'failed'
+          and raw_response is not null
+          and created_at < $1`,
+      [iso],
+    );
+    return result.rowCount ?? 0;
   }
 
   // digest_items

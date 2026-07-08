@@ -112,7 +112,10 @@ The app talks to Postgres through a swappable storage abstraction
 (`lib/storage`) over a `DATABASE_URL` connection string — the bundled container,
 or any external Postgres. Ingestion, summarizing and the digest live in
 `lib/jobs.ts`, called both by the worker's scheduler and the app's manual
-trigger buttons, so nothing is implemented twice.
+trigger buttons, so nothing is implemented twice. The worker also runs a daily
+retention job that clears the full article text of items older than 30 days
+(summaries, links, digests and feedback are kept forever) — see
+[data retention](./docs/self-hosting.md#data-retention).
 
 ## Security (no built-in auth)
 

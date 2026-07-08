@@ -55,6 +55,8 @@ Copy `.env.example` for the full annotated list.
 | `DIGEST_LANGUAGE` | no | Digest language, defaults to `en` (English). |
 | `DIGEST_TIMEZONE` | no | Timezone for the digest week window and the worker's schedules. Defaults to `UTC`. |
 | `INGEST_CRON` | no | Ingestion schedule (cron, in `DIGEST_TIMEZONE`). Defaults to `0 */6 * * *` (every 6 hours). The digest schedule is not an env var — configure it in the app under Settings. |
+| `ITEM_CONTENT_RETENTION_DAYS` | no | Days after fetch before an item's full article text is cleared (see [Data retention](#data-retention)). Defaults to `30`; `0` disables the cleanup. |
+| `CLEANUP_CRON` | no | Retention cleanup schedule (cron, in `DIGEST_TIMEZONE`). Defaults to `15 4 * * *` (daily at 04:15). |
 | `EMAIL_PROVIDER` | no | `resend` (default) or `smtp`. Email is disabled while the selected provider is not fully configured. |
 | `RESEND_API_KEY` | no | Resend API key (`EMAIL_PROVIDER=resend`). Leave empty to disable email. |
 | `SMTP_HOST` | no | SMTP server hostname (`EMAIL_PROVIDER=smtp`). Leave empty to disable email. |
@@ -112,6 +114,27 @@ restart the worker: `docker compose up -d worker`. The digest schedule
 (daily or weekly, day and time) is configured in the app under **Settings** and
 stored in the database; the worker picks up changes within a minute, no restart
 needed. Both schedules are evaluated in `DIGEST_TIMEZONE`.
+
+## Data retention
+
+Fetched items keep the full article text only as input for the per-item
+summary. Once an item is summarized, nothing reads that text again — the inbox,
+digest pages and the digest prompt all use the stored summary. The worker
+therefore runs a daily cleanup (`CLEANUP_CRON`) that clears the article text of
+summarized items fetched more than `ITEM_CONTENT_RETENTION_DAYS` days ago
+(default 30, matching the window in which an item can still enter a digest),
+plus the raw model output kept for failed digest runs. This keeps the database
+from growing with full article bodies.
+
+Everything else is kept forever: item titles, links, summaries and topics (so
+old digests keep their linked item lists), all digests, and all 👍/👎 feedback
+(the preference profile is synthesized from it). Set
+`ITEM_CONTENT_RETENTION_DAYS=0` to keep article text forever as well. There is
+no separate archive format — your regular `pg_dump` backups are the archive.
+
+Note on disk usage: clearing text frees space inside Postgres for reuse
+(autovacuum), which stops growth; the database files on disk only shrink after
+a manual `VACUUM FULL`, which is rarely worth the exclusive lock it takes.
 
 ## Migrations
 

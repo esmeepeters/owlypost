@@ -1,6 +1,6 @@
 import { schedule, validate } from "node-cron";
 import type { ScheduledTask } from "node-cron";
-import { runDigestJob, runIngestJob } from "./jobs.ts";
+import { runCleanupJob, runDigestJob, runIngestJob } from "./jobs.ts";
 import {
   DEFAULT_DIGEST_SCHEDULE,
   describeSchedule,
@@ -12,6 +12,10 @@ import { getStorage } from "./storage/index.ts";
 // schedule lives in the database (digest_schedule table, editable in
 // Settings) and is polled below. Both are evaluated in DIGEST_TIMEZONE.
 const INGEST_CRON = process.env.INGEST_CRON || "0 */6 * * *";
+// Data-retention cleanup (lib/retention.ts): daily, at a quiet hour by
+// default. ITEM_CONTENT_RETENTION_DAYS=0 disables the job's work; the tick
+// itself is harmless either way.
+const CLEANUP_CRON = process.env.CLEANUP_CRON || "15 4 * * *";
 const TIMEZONE = process.env.DIGEST_TIMEZONE || "UTC";
 
 // How late a delayed tick may still fire instead of being dropped (node-cron's
@@ -66,6 +70,9 @@ export async function startScheduler(): Promise<void> {
   if (!validate(INGEST_CRON)) {
     throw new Error(`Invalid INGEST_CRON cron expression: "${INGEST_CRON}"`);
   }
+  if (!validate(CLEANUP_CRON)) {
+    throw new Error(`Invalid CLEANUP_CRON cron expression: "${CLEANUP_CRON}"`);
+  }
 
   schedule(
     INGEST_CRON,
@@ -84,6 +91,23 @@ export async function startScheduler(): Promise<void> {
     },
   );
 
+  schedule(
+    CLEANUP_CRON,
+    async () => {
+      try {
+        await runCleanupJob();
+      } catch (error) {
+        console.error("Scheduled cleanup failed:", error);
+      }
+    },
+    {
+      timezone: TIMEZONE,
+      noOverlap: true,
+      name: "cleanup",
+      missedExecutionTolerance: MISSED_TOLERANCE_MS,
+    },
+  );
+
   // The first sync may throw (startup with an unreachable database should be
   // loud); afterwards a failed poll keeps the current schedule and only logs.
   await syncDigestSchedule();
@@ -97,6 +121,6 @@ export async function startScheduler(): Promise<void> {
   }, SCHEDULE_POLL_MS);
 
   console.log(
-    `Scheduler started (timezone ${TIMEZONE}): ingest "${INGEST_CRON}".`,
+    `Scheduler started (timezone ${TIMEZONE}): ingest "${INGEST_CRON}", cleanup "${CLEANUP_CRON}".`,
   );
 }

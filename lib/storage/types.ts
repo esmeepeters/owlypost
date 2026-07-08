@@ -181,6 +181,10 @@ export interface Storage {
   // Clears summaries so summarizePendingItems regenerates them; returns the
   // number of items affected.
   clearItemSummariesSince(iso: string): Promise<number>;
+  // Retention: clears the raw article text of summarized items fetched before
+  // the cutoff — after summarization only the summary is ever read. Returns
+  // the number of items affected.
+  stripItemContentBefore(iso: string): Promise<number>;
   countItemsSince(iso: string): Promise<number>;
   listInboxItems(filter: {
     source?: string;
@@ -203,6 +207,9 @@ export interface Storage {
   listDigests(): Promise<Digest[]>;
   getLatestDigest(): Promise<Digest | null>;
   getDigest(id: string): Promise<Digest | null>;
+  // Retention: clears the raw model response kept for failed digests created
+  // before the cutoff; returns the number of digests affected.
+  clearFailedDigestRawResponses(iso: string): Promise<number>;
 
   // digest_items
   insertDigestItems(
