@@ -158,4 +158,4 @@ an ambitious product, by showing how, doing it myself. I built Owly Post
 because I wanted one calm weekly read instead of a feed I'd never finish.
 
 Find more of me at [esmeepeters.com](https://esmeepeters.com) · subscribe to
-my newsletter at [dispatch.esmeepeters.com](https://dispatch.esmeepeters.com).
+my newsletter at [Substack](https://devmore.co).
