@@ -25,7 +25,7 @@ export default async function SourcesPage() {
   return (
     <>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Sources</h1>
+        <h1 className="font-display text-2xl font-medium">Sources</h1>
         <TriggerButton
           endpoint="/api/ingest"
           label="Fetch now"

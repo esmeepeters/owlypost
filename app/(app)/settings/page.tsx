@@ -20,7 +20,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">Settings</h1>
+      <h1 className="font-display text-2xl font-medium">Settings</h1>
 
       <section className="mt-8">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">

@@ -10,9 +10,11 @@ const LINKS = [
 
 export function Nav() {
   return (
-    <header className="border-b border-neutral-200">
+    <header className="border-b border-neutral-200 bg-white">
       <nav className="mx-auto flex max-w-2xl items-center gap-4 px-6 py-3 text-sm">
-        <span className="font-semibold text-accent">🦉 Owly Post</span>
+        <span className="font-display text-base font-medium text-accent">
+          🦉 Owly Post
+        </span>
         {LINKS.map((link) => (
           <Link
             key={link.href}

@@ -52,7 +52,7 @@ export default async function DigestPage({
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">
+      <h1 className="font-display text-2xl font-medium">
         {formatWeekRange(
           typedDigest.week_start,
           typedDigest.week_end,
@@ -94,7 +94,7 @@ export default async function DigestPage({
                 id={`section-${sectionSlug(section.category)}`}
                 className="mt-10 scroll-mt-20"
               >
-                <h2 className="text-lg font-semibold">{section.category}</h2>
+                <h2 className="font-display text-lg font-medium">{section.category}</h2>
                 {section.narrative_md && (
                   <div className="mt-2 text-[15px] text-neutral-800">
                     <Markdown text={section.narrative_md} />
