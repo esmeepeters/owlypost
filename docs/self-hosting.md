@@ -10,11 +10,12 @@ you. It runs as a Docker Compose stack with three services:
 There is **no built-in authentication** — see [Security](#security) below.
 
 You need: [Docker](https://docs.docker.com/get-docker/) with Compose, and an
-LLM API key — [Anthropic](https://platform.claude.com) (default) or
-[OpenAI](https://platform.openai.com) (also covers OpenAI-compatible servers
-such as Ollama or OpenRouter). Optionally a [Resend](https://resend.com)
-account or any SMTP server (your mail provider, or a local relay) for email
-delivery.
+LLM — either an API key for [Anthropic](https://platform.claude.com) (default)
+or [OpenAI](https://platform.openai.com), or a local OpenAI-compatible server
+such as Ollama (see
+[Running fully open source](#running-fully-open-source)). Optionally a
+[Resend](https://resend.com) account or any SMTP server (your mail provider,
+or a local relay) for email delivery.
 
 ## 1. Quick start
 
@@ -104,6 +105,48 @@ Point `DATABASE_URL` at your database (including a Supabase project's Postgres
 connection string, with `sslmode=require`) and remove the `postgres` service and
 the `DATABASE_URL` overrides from `docker-compose.yml`. Migrations are
 idempotent and safe to run against an existing database.
+
+## Running fully open source
+
+Owly Post does not require any proprietary service. The stack itself is open
+source end to end (the app is AGPL-3.0, Postgres is bundled, feeds are fetched
+directly from their origins), and both external integrations — the LLM and
+email — have self-hosted options:
+
+**LLM via [Ollama](https://ollama.com)** (or any OpenAI-compatible server) on
+the Docker host:
+
+```bash
+# .env
+LLM_PROVIDER=openai
+OPENAI_API_KEY=ollama                                  # any non-empty value
+OPENAI_BASE_URL=http://host.docker.internal:11434/v1
+LLM_MODEL_DIGEST=qwen3:14b                             # pick models you have pulled
+LLM_MODEL_SUMMARY=llama3.1:8b
+```
+
+Note the base URL: from inside the containers, `localhost` is the container
+itself — the host running Ollama is `host.docker.internal`. On Linux that name
+needs to be mapped explicitly; add it to **both** the `app` and `worker`
+services (both run LLM jobs — the worker on its schedules, the app for the
+manual "Generate digest now" / "Fetch now" actions):
+
+```yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+```
+
+Model choice: the per-item summaries are an easy task, but the digest asks for
+structured JSON output over a week of items — small models can struggle with
+that (support is best effort, as servers and models vary). Use a roomier model
+for `LLM_MODEL_DIGEST` and retry with a bigger one if digest runs fail.
+
+**Email via SMTP, or not at all**: set `EMAIL_PROVIDER=smtp` with your own
+server or relay (see the [SMTP notes](#smtp-notes)) — or skip email entirely;
+it stays disabled while unconfigured and the digest remains readable in the
+app.
+
+With that, everything runs on your own hardware and no data leaves it.
 
 ## Security
 

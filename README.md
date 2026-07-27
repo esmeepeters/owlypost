@@ -55,7 +55,9 @@ read one good newsletter than scroll endlessly.
 - **✉️ Optional email delivery** — via Resend or any standard SMTP server; the app works fully without it.
 - **🐳 Self-hosted with Docker Compose** — app, worker/scheduler, and a bundled
   Postgres, one `docker compose up` away. Bring your own LLM key — Anthropic
-  (default), OpenAI, or any OpenAI-compatible server (Ollama, OpenRouter).
+  (default), OpenAI, or any OpenAI-compatible server (Ollama, OpenRouter). With
+  Ollama and SMTP the whole stack
+  [runs without any proprietary service](./docs/self-hosting.md#running-fully-open-source).
 - **🔒 Single user, no accounts** — AGPL-3.0.
 
 ## Getting started
