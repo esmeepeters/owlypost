@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Category } from "@/lib/types";
-import type { DetectedFeed } from "@/lib/feed-detect";
-
-type DetectResponse =
-  | { ok: true; feed: DetectedFeed }
-  | { ok: false; tried: string[]; message: string };
+import type { DetectedFeed, DetectResult } from "@/lib/feed-detect";
 
 const NEW_CATEGORY = "__new__";
 
@@ -35,7 +31,7 @@ export function AddSource({ categories }: { categories: Category[] }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      const result = (await response.json()) as DetectResponse;
+      const result = (await response.json()) as DetectResult;
       if (result.ok) {
         setPreview(result.feed);
       } else {
@@ -75,6 +71,8 @@ export function AddSource({ categories }: { categories: Category[] }) {
         const body = (await response.json()) as { error?: string };
         setError(body.error ?? "Saving the source failed.");
       }
+    } catch {
+      setError("Saving the source failed unexpectedly. Try again.");
     } finally {
       setBusy(false);
     }
