@@ -67,8 +67,12 @@ runs ingestion and the digest on a schedule, and a bundled **Postgres**.
 git clone https://github.com/esmeepeters/owlypost.git
 cd owlypost
 cp .env.example .env    # add your LLM API key; the rest has sane defaults
-docker compose up -d --build
+docker compose up -d
 ```
+
+This pulls the prebuilt image from
+[GHCR](https://github.com/esmeepeters/owlypost/pkgs/container/owlypost) — no
+local build needed.
 
 The app is then on `http://localhost:3000`. Add sources on `/sources`, press
 **Fetch now**, and the first digest arrives on the next schedule (or press

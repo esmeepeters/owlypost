@@ -22,11 +22,21 @@ delivery.
 git clone https://github.com/esmeepeters/owlypost.git
 cd owlypost
 cp .env.example .env    # fill in your LLM API key; defaults cover the rest
-docker compose up -d --build
+docker compose up -d
 ```
 
-This starts Postgres, applies migrations (a one-shot `migrate` service), then
-brings up the app and worker. The app is on `http://localhost:3000`.
+This pulls the prebuilt image from
+[GHCR](https://github.com/esmeepeters/owlypost/pkgs/container/owlypost) (multi-arch:
+amd64 and arm64), starts Postgres, applies migrations (a one-shot `migrate`
+service), then brings up the app and worker. The app is on
+`http://localhost:3000`. Pin a specific version with `OWLYPOST_TAG=1.0.1` in
+`.env`; to run from source instead, build the image locally and point compose
+at it:
+
+```bash
+docker build -t ghcr.io/esmeepeters/owlypost:dev .
+OWLYPOST_TAG=dev docker compose up -d
+```
 
 Optionally seed a few example categories and feeds:
 

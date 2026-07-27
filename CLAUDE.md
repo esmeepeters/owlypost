@@ -37,8 +37,9 @@ Environment variables are documented in `.env.example` (`DATABASE_URL`, `LLM_PRO
 
 ## Deploy
 
-Docker Compose: `postgres` + one-shot `migrate` + `app` (`next start`) + `worker` (`node scripts/worker.ts`). `docker compose up -d --build`. The worker runs the digest on the schedule stored in the `digest_schedule` table (editable in Settings, default Sunday 17:00 in `DIGEST_TIMEZONE`; the worker polls it, so changes need no restart), so it must run on an always-on host.
+Docker Compose: `postgres` + one-shot `migrate` + `app` (`next start`) + `worker` (`node scripts/worker.ts`). `docker compose up -d` pulls `ghcr.io/esmeepeters/owlypost` (tag via `OWLYPOST_TAG`, default `latest`), published by `.github/workflows/release.yml` on version tags (`x.y.z`); build from source with `docker build -t ghcr.io/esmeepeters/owlypost:dev .`. The worker runs the digest on the schedule stored in the `digest_schedule` table (editable in Settings, default Sunday 17:00 in `DIGEST_TIMEZONE`; the worker polls it, so changes need no restart), so it must run on an always-on host.
 
 ## Conventions
 
 - Commits: Conventional Commits (`type(scope): description`).
+- Releases: bump the version in `package.json` (`chore(release): x.y.z`), tag `x.y.z`, and document changes in a GitHub Release on that tag. No `CHANGELOG.md` in the repo.

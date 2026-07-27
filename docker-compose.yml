@@ -4,7 +4,14 @@
 # pointing DATABASE_URL at it and removing the postgres service + the DATABASE_URL
 # overrides below.
 #
-#   docker compose up -d --build
+#   docker compose up -d
+#
+# This pulls the prebuilt image from GHCR (published by the release workflow).
+# Pin a version with OWLYPOST_TAG=1.0.1 in .env or the shell. To run from
+# source instead, build the image locally under a tag and point compose at it:
+#
+#   docker build -t ghcr.io/esmeepeters/owlypost:dev .
+#   OWLYPOST_TAG=dev docker compose up -d
 
 x-app-env: &app-env
   NODE_ENV: production
@@ -41,8 +48,7 @@ services:
 
   # One-shot: applies pending migrations, then exits. App and worker wait for it.
   migrate:
-    build: .
-    image: owlypost:local
+    image: ghcr.io/esmeepeters/owlypost:${OWLYPOST_TAG:-latest}
     command: ["node", "scripts/migrate.ts"]
     env_file: .env
     environment: *app-env
@@ -52,7 +58,7 @@ services:
     restart: "no"
 
   app:
-    image: owlypost:local
+    image: ghcr.io/esmeepeters/owlypost:${OWLYPOST_TAG:-latest}
     restart: unless-stopped
     env_file: .env
     environment: *app-env
@@ -66,7 +72,7 @@ services:
         condition: service_completed_successfully
 
   worker:
-    image: owlypost:local
+    image: ghcr.io/esmeepeters/owlypost:${OWLYPOST_TAG:-latest}
     restart: unless-stopped
     command: ["node", "scripts/worker.ts"]
     env_file: .env
