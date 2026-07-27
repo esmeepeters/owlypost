@@ -1,16 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-const WEEKDAYS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-];
+import { WEEKDAYS } from "@/lib/digest-schedule";
 
 export function DigestScheduleEditor({
   initialSchedule,

@@ -79,12 +79,10 @@ export default async function SettingsPage() {
           <TriggerButton
             endpoint="/api/ingest"
             label="Fetch now"
-            busyLabel="Starting…"
           />
           <TriggerButton
             endpoint="/api/digest"
             label="Generate digest now"
-            busyLabel="Starting…"
           />
         </div>
       </section>

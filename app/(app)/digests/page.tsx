@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { formatShortDate, formatWeekRange } from "@/lib/format";
 import { getStorage } from "@/lib/storage";
+import {
+  DEFAULT_DIGEST_SCHEDULE,
+  describeSchedule,
+} from "@/lib/digest-schedule";
 import type { Digest } from "@/lib/types";
 import { TriggerButton } from "@/components/trigger-button";
 
@@ -15,7 +19,11 @@ const STATUS_STYLES: Record<Digest["status"], string> = {
 };
 
 export default async function DigestsPage() {
-  const digestList = await getStorage().listDigests();
+  const storage = getStorage();
+  const [digestList, schedule] = await Promise.all([
+    storage.listDigests(),
+    storage.getDigestSchedule(),
+  ]);
   const language = process.env.DIGEST_LANGUAGE || "en";
 
   return (
@@ -25,13 +33,13 @@ export default async function DigestsPage() {
         <TriggerButton
           endpoint="/api/digest"
           label="Generate digest now"
-          busyLabel="Starting…"
         />
       </div>
 
       {digestList.length === 0 && (
         <p className="mt-8 text-neutral-600">
-          No digests yet. One is generated every Sunday evening, or press
+          No digests yet. One is generated{" "}
+          {describeSchedule(schedule ?? DEFAULT_DIGEST_SCHEDULE)}, or press
           &ldquo;Generate digest now&rdquo;.
         </p>
       )}

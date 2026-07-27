@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Rating as RatingValue } from "@/lib/types";
 
 // What the feedback is about: an item's verdict or a section's summary.
-export type RatingTarget =
+type RatingTarget =
   | { kind: "item"; digestItemId: string }
   | { kind: "section"; digestId: string; category: string };
 

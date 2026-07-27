@@ -14,13 +14,22 @@ export default async function SourcesPage() {
     storage.listAllSources(),
   ]);
 
-  const groups = categoryList
+  const groups: {
+    category: { id: string; name: string };
+    sources: typeof sourceList;
+  }[] = categoryList
     .map((category) => ({
       category,
       sources: sourceList.filter((s) => s.category_id === category.id),
     }))
     .filter((group) => group.sources.length > 0);
   const uncategorized = sourceList.filter((s) => s.category_id === null);
+  if (uncategorized.length > 0) {
+    groups.push({
+      category: { id: "uncategorized", name: "Uncategorized" },
+      sources: uncategorized,
+    });
+  }
 
   return (
     <>
@@ -29,7 +38,6 @@ export default async function SourcesPage() {
         <TriggerButton
           endpoint="/api/ingest"
           label="Fetch now"
-          busyLabel="Starting…"
         />
       </div>
 
@@ -72,23 +80,6 @@ export default async function SourcesPage() {
           </ul>
         </section>
       ))}
-
-      {uncategorized.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-            Uncategorized
-          </h2>
-          <ul className="mt-2 divide-y divide-neutral-100">
-            {uncategorized.map((source) => (
-              <SourceRow
-                key={source.id}
-                source={source}
-                categories={categoryList}
-              />
-            ))}
-          </ul>
-        </section>
-      )}
     </>
   );
 }

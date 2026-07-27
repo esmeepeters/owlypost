@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  /* The single accent color used across the UI; change it here to retheme. */
+  /* Brand accent (amber), used for links, buttons and highlights. */
   --accent: #c98a2c;
 }
 
@@ -11,9 +11,9 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 
-  /* The neutral scale is retinted to the brand palette: dark greens for text
-     and surfaces, Stone for light-mode secondary text, Haze/Mist for borders
-     and page background. */
+  /* Neutral scale retinted toward the brand palette: green-tinted lights for
+     borders and page background, cool greys for secondary text, dark greens
+     for headings and body text. */
   --color-neutral-50: #f2f3f1;
   --color-neutral-100: #e8ecea;
   --color-neutral-200: #dde3e2;

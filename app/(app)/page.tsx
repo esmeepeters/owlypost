@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { getStorage } from "@/lib/storage";
 import { weekWindow } from "@/lib/digest";
+import {
+  DEFAULT_DIGEST_SCHEDULE,
+  describeSchedule,
+} from "@/lib/digest-schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +13,11 @@ export default async function DashboardPage() {
   const timeZone = process.env.DIGEST_TIMEZONE || "UTC";
   const { startUtc } = weekWindow(new Date(), timeZone);
 
-  const [itemCount, digest, broken] = await Promise.all([
+  const [itemCount, digest, broken, schedule] = await Promise.all([
     storage.countItemsSince(startUtc.toISOString()),
     storage.getLatestDigest(),
     storage.listErrorSources(),
+    storage.getDigestSchedule(),
   ]);
 
   return (
@@ -43,8 +48,10 @@ export default async function DashboardPage() {
             </>
           ) : (
             <p className="text-sm text-neutral-600">
-              No digest yet. The first one arrives Sunday evening, or trigger
-              one from the <Link href="/digests" className="text-accent">digests page</Link>.
+              No digest yet. The first one arrives{" "}
+              {describeSchedule(schedule ?? DEFAULT_DIGEST_SCHEDULE)}, or
+              trigger one from the{" "}
+              <Link href="/digests" className="text-accent">digests page</Link>.
             </p>
           )}
         </div>

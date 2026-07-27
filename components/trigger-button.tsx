@@ -7,16 +7,14 @@ import { useRouter } from "next/navigation";
 export function TriggerButton({
   endpoint,
   label,
-  busyLabel,
+  busyLabel = "Starting…",
 }: {
   endpoint: string;
   label: string;
-  busyLabel: string;
+  busyLabel?: string;
 }) {
   const router = useRouter();
-  const [state, setState] = useState<"idle" | "busy" | "done" | "error">(
-    "idle",
-  );
+  const [state, setState] = useState<"idle" | "busy" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
   async function trigger() {
@@ -25,7 +23,7 @@ export function TriggerButton({
     try {
       const response = await fetch(endpoint, { method: "POST" });
       if (response.ok) {
-        setState("done");
+        setState("idle");
         setMessage("Started in the background; refresh in a bit.");
         router.refresh();
       } else {

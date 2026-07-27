@@ -8,22 +8,23 @@ import { Rating } from "@/components/rating";
 
 export const dynamic = "force-dynamic";
 
-const VERDICT_STYLES: Record<Verdict, string> = {
+// "skip" never renders a badge: skipped items are filtered out below.
+const VERDICT_STYLES: Record<Exclude<Verdict, "skip">, string> = {
   must_read: "bg-accent text-white",
   worth_it: "bg-green-100 text-green-800",
-  skip: "bg-neutral-100 text-neutral-500",
 };
 
-const VERDICT_LABELS: Record<Verdict, string> = {
+const VERDICT_LABELS: Record<Exclude<Verdict, "skip">, string> = {
   must_read: "must read",
   worth_it: "worth it",
-  skip: "skip",
 };
+
+type SectionItem = { item_id: string; verdict: Verdict; reason: string };
 
 type Section = {
   category: string;
   narrative_md: string;
-  items: { item_id: string; verdict: Verdict; reason: string }[];
+  items: SectionItem[];
 };
 
 export default async function DigestPage({
@@ -63,12 +64,14 @@ export default async function DigestPage({
       {typedDigest.status === "failed" ? (
         <div className="mt-6 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <p className="font-medium">
-            This digest failed to generate: the model did not return valid
-            JSON, even after a retry.
+            This digest failed to generate: the model call failed or did not
+            return valid JSON, even after a retry.
           </p>
           {typedDigest.raw_response && (
             <details className="mt-2">
-              <summary className="cursor-pointer">Raw model response</summary>
+              <summary className="cursor-pointer">
+                Raw model response or error
+              </summary>
               <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs">
                 {typedDigest.raw_response}
               </pre>
@@ -85,7 +88,8 @@ export default async function DigestPage({
 
           {sections.map((section) => {
             const visible = section.items.filter(
-              (entry) => entry.verdict !== "skip",
+              (entry): entry is SectionItem & { verdict: Exclude<Verdict, "skip"> } =>
+                entry.verdict !== "skip",
             );
             const feedback = feedbackByCategory.get(section.category);
             return (
