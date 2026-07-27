@@ -43,3 +43,4 @@ Docker Compose: `postgres` + one-shot `migrate` + `app` (`next start`) + `worker
 
 - Commits: Conventional Commits (`type(scope): description`).
 - Releases: bump the version in `package.json` (`chore(release): x.y.z`), tag `x.y.z`, and document changes in a GitHub Release on that tag. No `CHANGELOG.md` in the repo.
+- Contributions: external PRs require a one-time CLA signature (`CLA.md`, enforced by `.github/workflows/cla.yml`; a paid edition builds on this codebase, so contributions must be usable outside the AGPL) and a DCO sign-off per commit (`git commit -s`).

@@ -148,6 +148,10 @@ Owly Post is a personal, single-user project — built for one reader, me. I
 can't promise to act on contributions, but I'd genuinely love to hear from
 you: spotted a bug or have an idea? Open an issue and tell me about it. 🦉
 
+Sending a pull request? See [CONTRIBUTING.md](./CONTRIBUTING.md) — you'll be
+asked to sign the [CLA](./CLA.md) once, and commits need a DCO sign-off
+(`git commit -s`).
+
 ## License
 
 [AGPL-3.0](./LICENSE)
