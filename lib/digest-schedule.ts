@@ -22,7 +22,7 @@ export const DEFAULT_DIGEST_SCHEDULE: DigestScheduleSetting = {
   minute: 0,
 };
 
-const WEEKDAYS = [
+export const WEEKDAYS = [
   "Sunday",
   "Monday",
   "Tuesday",

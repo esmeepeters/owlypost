@@ -2,10 +2,10 @@ import pg, { type Pool } from "pg";
 
 const { types } = pg;
 
-// PostgREST returned every timestamp as an ISO string and the app compares and
-// serialises them as strings throughout. node-postgres parses timestamptz to a
-// Date by default, so normalise back to ISO strings, and keep `date` columns as
-// plain YYYY-MM-DD strings (week_start / week_end) to preserve behaviour.
+// The app compares and serialises timestamps as strings throughout (the types
+// in storage/types.ts declare them as string). node-postgres parses
+// timestamptz to a Date by default, so normalise to ISO strings, and keep
+// `date` columns as plain YYYY-MM-DD strings (week_start / week_end).
 types.setTypeParser(1184, (value) =>
   value === null ? null : new Date(value).toISOString(),
 ); // timestamptz

@@ -9,6 +9,10 @@ import net from "node:net";
 // loopback, link-local and reserved addresses before connecting — on the
 // initial URL and again on every redirect hop.
 
+// Shared user-agent for all outbound feed/page fetches.
+export const USER_AGENT =
+  "OwlyPost/1.0 (personal feed reader; +https://owly-post.com)";
+
 export class SsrfError extends Error {
   constructor(message: string) {
     super(message);

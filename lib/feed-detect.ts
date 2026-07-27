@@ -1,5 +1,5 @@
 import Parser from "rss-parser";
-import { safeFetch, safeHttpUrl } from "./net.ts";
+import { USER_AGENT, safeFetch, safeHttpUrl } from "./net.ts";
 
 export type FeedPreviewItem = {
   title: string;
@@ -23,8 +23,6 @@ export type Fetcher = (
   init?: RequestInit,
 ) => Promise<Response>;
 
-const USER_AGENT =
-  "OwlyPost/0.1 (personal feed reader; +https://owly-post.com)";
 const FETCH_TIMEOUT_MS = 10_000;
 const PROBE_PATHS = [
   "/feed",

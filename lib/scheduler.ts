@@ -31,6 +31,32 @@ const SCHEDULE_POLL_MS = 60_000;
 let digestTask: ScheduledTask | null = null;
 let digestCron: string | null = null;
 
+// Shared task shape: noOverlap prevents a slow run from overlapping the next
+// tick; errors are logged, never thrown, so one bad run does not kill the
+// scheduler.
+function scheduleJob(
+  name: string,
+  expression: string,
+  job: () => Promise<unknown>,
+): ScheduledTask {
+  return schedule(
+    expression,
+    async () => {
+      try {
+        await job();
+      } catch (error) {
+        console.error(`Scheduled ${name} failed:`, error);
+      }
+    },
+    {
+      timezone: TIMEZONE,
+      noOverlap: true,
+      name,
+      missedExecutionTolerance: MISSED_TOLERANCE_MS,
+    },
+  );
+}
+
 // Reads the digest schedule and re-creates the cron task when it changed.
 // destroy() removes the old task from node-cron's registry, so the "digest"
 // name can be reused. In steady state (no change) this is a no-op.
@@ -41,31 +67,14 @@ async function syncDigestSchedule(): Promise<void> {
   if (expression === digestCron) return;
 
   digestTask?.destroy();
-  digestTask = schedule(
-    expression,
-    async () => {
-      try {
-        await runDigestJob();
-      } catch (error) {
-        console.error("Scheduled digest failed:", error);
-      }
-    },
-    {
-      timezone: TIMEZONE,
-      noOverlap: true,
-      name: "digest",
-      missedExecutionTolerance: MISSED_TOLERANCE_MS,
-    },
-  );
+  digestTask = scheduleJob("digest", expression, runDigestJob);
   digestCron = expression;
   console.log(
     `Digest scheduled ${describeSchedule(setting)} ("${expression}", ${TIMEZONE}).`,
   );
 }
 
-// Starts the in-process scheduler. node-cron's noOverlap prevents a slow run
-// from overlapping the next tick. Errors are logged, never thrown, so one bad
-// run does not kill the scheduler.
+// Starts the in-process scheduler.
 export async function startScheduler(): Promise<void> {
   if (!validate(INGEST_CRON)) {
     throw new Error(`Invalid INGEST_CRON cron expression: "${INGEST_CRON}"`);
@@ -74,39 +83,8 @@ export async function startScheduler(): Promise<void> {
     throw new Error(`Invalid CLEANUP_CRON cron expression: "${CLEANUP_CRON}"`);
   }
 
-  schedule(
-    INGEST_CRON,
-    async () => {
-      try {
-        await runIngestJob();
-      } catch (error) {
-        console.error("Scheduled ingest failed:", error);
-      }
-    },
-    {
-      timezone: TIMEZONE,
-      noOverlap: true,
-      name: "ingest",
-      missedExecutionTolerance: MISSED_TOLERANCE_MS,
-    },
-  );
-
-  schedule(
-    CLEANUP_CRON,
-    async () => {
-      try {
-        await runCleanupJob();
-      } catch (error) {
-        console.error("Scheduled cleanup failed:", error);
-      }
-    },
-    {
-      timezone: TIMEZONE,
-      noOverlap: true,
-      name: "cleanup",
-      missedExecutionTolerance: MISSED_TOLERANCE_MS,
-    },
-  );
+  scheduleJob("ingest", INGEST_CRON, runIngestJob);
+  scheduleJob("cleanup", CLEANUP_CRON, runCleanupJob);
 
   // The first sync may throw (startup with an unreachable database should be
   // loud); afterwards a failed poll keeps the current schedule and only logs.

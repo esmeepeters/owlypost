@@ -3,6 +3,7 @@ import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { z } from "zod";
 import { getLlm, JsonCallError } from "./llm/index.ts";
 import { isEmailConfigured, sendDigestEmail } from "./email/index.ts";
+import { DEFAULT_DIGEST_SCHEDULE } from "./digest-schedule.ts";
 import { synthesizeProfile } from "./profile.ts";
 import type { DigestFrequency } from "./types.ts";
 import type { Storage } from "./storage/index.ts";
@@ -294,7 +295,8 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
   const language = process.env.DIGEST_LANGUAGE || "en";
   const now = new Date();
   const frequency =
-    (await storage.getDigestSchedule())?.frequency ?? "weekly";
+    (await storage.getDigestSchedule())?.frequency ??
+    DEFAULT_DIGEST_SCHEDULE.frequency;
   const { weekStart, weekEnd } = digestWindow(now, timeZone, frequency);
 
   // 1. Collect everything not yet included in a digest (by published_at,
@@ -344,7 +346,7 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
   }
 
   const feedback = feedbackRows.map((row) => ({
-    rating: row.rating as string,
+    rating: row.rating,
     title: row.title ?? "(deleted item)",
     comment: row.comment,
   }));
@@ -360,8 +362,7 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
     itemsByCategory,
   });
 
-  // 5. Call the model; on a double JSON failure store the raw response with
-  // status failed so it surfaces on the digests page.
+  // 5. Call the model.
   const llm = getLlm();
   const model = llm.digestModel;
   let body: DigestBody;

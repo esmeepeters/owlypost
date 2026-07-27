@@ -6,9 +6,6 @@ import { renderDigestEmailHtml } from "./render.ts";
 import type { EmailConfig } from "./config.ts";
 import type { EmailDigest, EmailProvider, EmailProviderName } from "./types.ts";
 
-export { renderDigestEmailHtml } from "./render.ts";
-export type { EmailDigest, EmailDigestItem } from "./types.ts";
-
 // Email is optional: when the selected provider (EMAIL_PROVIDER, default
 // resend) is missing settings the app skips email and the digest stays
 // available in the app only.

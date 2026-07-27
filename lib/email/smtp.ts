@@ -1,14 +1,10 @@
 import nodemailer from "nodemailer";
+import type { EmailConfig } from "./config.ts";
 import type { EmailMessage, EmailProvider } from "./types.ts";
 
-export type SmtpConfig = {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth?: { user: string; pass: string };
-};
+export type SmtpConfig = Extract<EmailConfig, { provider: "smtp" }>;
 
-// One transport per send: the digest mails a single message a week, so
+// One transport per send: the digest mails at most one message a day, so
 // connection pooling buys nothing. Timeouts keep a hung SMTP server from
 // stalling the worker's digest job.
 export function createSmtpProvider(config: SmtpConfig): EmailProvider {

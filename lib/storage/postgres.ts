@@ -5,6 +5,7 @@ import type {
   DigestFrequency,
   DigestSchedule,
   DigestStatus,
+  Rating,
   SectionFeedback,
   Source,
   SourceStatus,
@@ -501,7 +502,7 @@ export class PostgresStorage implements Storage {
 
   async upsertFeedback(
     digestItemId: string,
-    rating: string,
+    rating: Rating,
     comment: string | null,
   ): Promise<void> {
     await this.#pool.query(
@@ -544,7 +545,7 @@ export class PostgresStorage implements Storage {
   async upsertSectionFeedback(
     digestId: string,
     category: string,
-    rating: string,
+    rating: Rating,
     comment: string | null,
   ): Promise<void> {
     await this.#pool.query(

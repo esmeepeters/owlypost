@@ -2,13 +2,11 @@ import { createHash } from "node:crypto";
 import Parser from "rss-parser";
 import { z } from "zod";
 import { getLlm } from "./llm/index.ts";
-import { assertPublicUrl, safeFetch, safeHttpUrl } from "./net.ts";
+import { USER_AGENT, assertPublicUrl, safeFetch, safeHttpUrl } from "./net.ts";
 import type { Source } from "./types.ts";
 import type { Storage } from "./storage/index.ts";
 import type { NewItem } from "./storage/types.ts";
 
-const USER_AGENT =
-  "OwlyPost/0.1 (personal feed reader; +https://owly-post.com)";
 const FEED_TIMEOUT_MS = 15_000;
 const EXTRACT_TIMEOUT_MS = 8_000;
 const EXTRACT_THRESHOLD_CHARS = 500;

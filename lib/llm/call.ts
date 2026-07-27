@@ -83,11 +83,10 @@ export async function callText(options: {
   maxTokens: number;
 }): Promise<{ text: string; usage: TokenUsage }> {
   const { provider, model, system, prompt, maxTokens } = options;
-  const { text, usage } = await provider.generateText({
+  return provider.generateText({
     model,
     ...(system ? { system } : {}),
     prompt,
     maxTokens,
   });
-  return { text, usage };
 }

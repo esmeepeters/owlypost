@@ -50,8 +50,6 @@ export type Digest = {
   status: DigestStatus;
   // Only written for empty digests (the short no-items message).
   intro_md: string | null;
-  // Legacy: column retained for old rows, no longer written.
-  closing_md: string | null;
   body: unknown;
   model: string | null;
   token_usage: unknown;

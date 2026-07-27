@@ -1,6 +1,6 @@
 // Stable anchor slug for a digest section, shared by the email renderer and
 // the digest page. Lives outside digest.ts to avoid an import cycle
-// (digest.ts imports email.ts).
+// (digest.ts imports the email renderer, which imports this).
 export function sectionSlug(category: string): string {
   const slug = category
     .toLowerCase()

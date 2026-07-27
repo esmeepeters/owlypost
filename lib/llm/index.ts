@@ -5,7 +5,6 @@ import { createOpenAiProvider } from "./openai.ts";
 import type { LlmProvider, TokenUsage } from "./types.ts";
 
 export { JsonCallError } from "./types.ts";
-export type { TokenUsage, LlmProvider } from "./types.ts";
 
 export type LlmProviderName = "anthropic" | "openai";
 
