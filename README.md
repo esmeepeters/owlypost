@@ -4,6 +4,7 @@
 
 **Your own personal content radar that mails you one good newsletter a week — instead of a thousand headlines.**
 
+[![CI](https://github.com/esmeepeters/owlypost/actions/workflows/ci.yml/badge.svg)](https://github.com/esmeepeters/owlypost/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
 [![Built with Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
