@@ -134,6 +134,9 @@ directly to the internet**. Secure it at the deployment level:
 - keep it on a private network / VPN (e.g. Tailscale), and
 - do not publish the container ports to a public interface.
 
+Found a vulnerability? Please report it privately — see
+[SECURITY.md](./SECURITY.md).
+
 ## Costs
 
 Self-hosted, the stack runs on any small box or VPS you already have. The only
