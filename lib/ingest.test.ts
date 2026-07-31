@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   canonicalHash,
+  mediaFields,
   normalizeUrl,
+  parseItunesDuration,
   planUrlHashBackfill,
   urlHash,
   type BackfillRow,
@@ -112,4 +114,85 @@ test("planUrlHashBackfill hashes distinct urls independently", () => {
 
 test("planUrlHashBackfill returns nothing for empty input", () => {
   assert.deepEqual(planUrlHashBackfill([]), []);
+});
+
+test("parseItunesDuration handles seconds and colon notation", () => {
+  assert.equal(parseItunesDuration("3723"), 3723);
+  assert.equal(parseItunesDuration("1:02:03"), 3723);
+  assert.equal(parseItunesDuration("12:34"), 754);
+  assert.equal(parseItunesDuration(" 12:34 "), 754);
+});
+
+test("parseItunesDuration rejects garbage", () => {
+  assert.equal(parseItunesDuration(undefined), null);
+  assert.equal(parseItunesDuration(""), null);
+  assert.equal(parseItunesDuration("about an hour"), null);
+  assert.equal(parseItunesDuration("1:02:03:04"), null);
+  assert.equal(parseItunesDuration("-5"), null);
+});
+
+test("mediaFields maps a YouTube item from the media:group shape", () => {
+  const fields = mediaFields(
+    "youtube",
+    {
+      ytVideoId: "abc-123XYZ_",
+      mediaGroup: {
+        "media:description": ["What the video covers."],
+        "media:thumbnail": [{ $: { url: "https://i.ytimg.com/vi/abc/hq.jpg" } }],
+      },
+    },
+    null,
+  );
+  assert.equal(fields.external_id, "abc-123XYZ_");
+  assert.equal(fields.thumbnail_url, "https://i.ytimg.com/vi/abc/hq.jpg");
+  assert.equal(fields.content_text, "What the video covers.");
+  assert.equal(fields.media_url, null);
+});
+
+test("mediaFields falls back to the ytimg thumbnail from the video id", () => {
+  const fields = mediaFields("youtube", { ytVideoId: "abc123" }, null);
+  assert.equal(fields.thumbnail_url, "https://i.ytimg.com/vi/abc123/hqdefault.jpg");
+  assert.equal(fields.content_text, "");
+});
+
+test("mediaFields maps a podcast item, preferring the item image", () => {
+  const fields = mediaFields(
+    "podcast",
+    {
+      enclosure: { url: "https://cdn.example.com/1.mp3", type: "audio/mpeg" },
+      itunes: {
+        duration: "12:34",
+        image: "https://pod.example.com/ep1.jpg",
+        summary: "Show notes here.",
+      },
+    },
+    "https://pod.example.com/cover.jpg",
+  );
+  assert.equal(fields.media_url, "https://cdn.example.com/1.mp3");
+  assert.equal(fields.media_type, "audio/mpeg");
+  assert.equal(fields.duration_seconds, 754);
+  assert.equal(fields.thumbnail_url, "https://pod.example.com/ep1.jpg");
+  assert.equal(fields.content_text, "Show notes here.");
+});
+
+test("mediaFields falls back to the channel image and sanitizes the enclosure", () => {
+  const fields = mediaFields(
+    "podcast",
+    { enclosure: { url: "ftp://cdn.example.com/1.mp3", type: "audio/mpeg" } },
+    "https://pod.example.com/cover.jpg",
+  );
+  assert.equal(fields.media_url, null);
+  assert.equal(fields.thumbnail_url, "https://pod.example.com/cover.jpg");
+});
+
+test("mediaFields leaves plain rss items without media", () => {
+  const fields = mediaFields(
+    "rss",
+    { content: "<p>Hello <b>world</b></p>" },
+    null,
+  );
+  assert.equal(fields.content_text, "Hello world");
+  assert.equal(fields.media_url, null);
+  assert.equal(fields.thumbnail_url, null);
+  assert.equal(fields.external_id, null);
 });

@@ -8,6 +8,7 @@ const bodySchema = z
     title: z.string().min(1),
     feedUrl: z.url(),
     siteUrl: z.url().nullable(),
+    type: z.enum(["rss", "youtube", "podcast", "reddit"]).default("rss"),
     categoryId: z.uuid().optional(),
     newCategoryName: z.string().min(1).optional(),
   })
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
       title: body.title,
       feed_url: body.feedUrl,
       site_url: body.siteUrl,
+      type: body.type,
       category_id: categoryId,
     });
   } catch (error) {

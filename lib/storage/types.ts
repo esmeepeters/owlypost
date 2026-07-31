@@ -16,6 +16,7 @@ import type {
   SectionFeedback,
   Source,
   SourceStatus,
+  SourceType,
   Verdict,
 } from "../types.ts";
 
@@ -29,7 +30,7 @@ export type DigestCandidate = {
   published_at: string | null;
   fetched_at: string;
   source_id: string;
-  sources: { title: string; category_id: string | null };
+  sources: { title: string; category_id: string | null; type: SourceType };
 };
 
 // An item joined with its source, as shown in the inbox.
@@ -39,9 +40,19 @@ export type InboxItem = {
   url: string | null;
   summary: string | null;
   topics: string[] | null;
+  media_url: string | null;
+  media_type: string | null;
+  duration_seconds: number | null;
+  thumbnail_url: string | null;
+  external_id: string | null;
   published_at: string | null;
   fetched_at: string;
-  sources: { id: string; title: string; category_id: string | null };
+  sources: {
+    id: string;
+    title: string;
+    category_id: string | null;
+    type: SourceType;
+  };
 };
 
 // A category with the number of sources currently assigned to it.
@@ -83,6 +94,11 @@ export type NewItem = {
   title: string;
   author: string | null;
   content_text: string | null;
+  media_url: string | null;
+  media_type: string | null;
+  duration_seconds: number | null;
+  thumbnail_url: string | null;
+  external_id: string | null;
   published_at: string | null;
 };
 
@@ -96,12 +112,14 @@ export type PendingItem = {
   id: string;
   title: string;
   content_text: string | null;
+  source_type: SourceType;
 };
 
 export type SourceInput = {
   title: string;
   feed_url: string;
   site_url: string | null;
+  type: SourceType;
   category_id: string | null;
 };
 
@@ -153,6 +171,9 @@ export interface Storage {
     clearFailures: boolean,
   ): Promise<void>;
   setSourceCategory(id: string, categoryId: string | null): Promise<void>;
+  // Used by ingest to reclassify an rss source as a podcast once the feed
+  // body reveals audio enclosures.
+  setSourceType(id: string, type: SourceType): Promise<void>;
   deleteSource(id: string): Promise<void>;
 
   // categories

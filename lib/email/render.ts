@@ -58,6 +58,12 @@ export function renderDigestEmailHtml(
         .map((item) => {
           const badge = VERDICT_BADGES[item.verdict];
           const anchorUrl = `${digestUrl}#item-${item.digestItemId}`;
+          const sourceLabel =
+            item.sourceType === "youtube"
+              ? `Video · ${item.sourceTitle}`
+              : item.sourceType === "podcast"
+                ? `Podcast · ${item.sourceTitle}`
+                : item.sourceTitle;
           const titleHtml = item.url
             ? `<a href="${escapeHtml(item.url)}" style="color:#171717; text-decoration:none; font-weight:600;">${escapeHtml(item.title)}</a>`
             : `<span style="font-weight:600;">${escapeHtml(item.title)}</span>`;
@@ -66,7 +72,7 @@ export function renderDigestEmailHtml(
               <div style="font-size:14px; line-height:1.45;">
                 <span style="display:inline-block; font-size:10px; font-weight:600; padding:1px 5px; border-radius:3px; vertical-align:1px; ${badge.style}">${badge.label}</span>
                 ${titleHtml}
-                <span style="font-size:12px; color:#a3a3a3;">&nbsp;·&nbsp;${escapeHtml(item.sourceTitle)}</span>
+                <span style="font-size:12px; color:#a3a3a3;">&nbsp;·&nbsp;${escapeHtml(sourceLabel)}</span>
               </div>
               <div style="font-size:12px; color:#525252; line-height:1.4; margin-top:1px;">
                 ${escapeHtml(item.reason)}

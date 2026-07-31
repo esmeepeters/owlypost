@@ -1,5 +1,6 @@
 import Parser from "rss-parser";
 import { USER_AGENT, safeFetch, safeHttpUrl } from "./net.ts";
+import type { SourceType } from "./types.ts";
 
 export type FeedPreviewItem = {
   title: string;
@@ -11,6 +12,7 @@ export type DetectedFeed = {
   feedUrl: string;
   title: string;
   siteUrl: string | null;
+  kind: SourceType;
   recentItems: FeedPreviewItem[];
 };
 
@@ -62,6 +64,29 @@ function looksLikeFeed(contentType: string | null, body: string): boolean {
   );
 }
 
+// Classifies a parsed feed by its URL host (YouTube, Reddit) or its content:
+// a feed where most items carry an audio enclosure is a podcast.
+export function classifyFeed(
+  feed: { items: { enclosure?: { url?: string; type?: string } }[] },
+  feedUrl: string,
+): SourceType {
+  let host: string;
+  try {
+    host = new URL(feedUrl).hostname.toLowerCase();
+  } catch {
+    host = "";
+  }
+  if (host === "www.youtube.com" || host === "youtube.com") return "youtube";
+  if (/(^|\.)reddit\.com$/.test(host)) return "reddit";
+  const items = feed.items ?? [];
+  const audio = items.filter(
+    (item) =>
+      item.enclosure?.type?.toLowerCase().startsWith("audio/") ||
+      /\.(mp3|m4a|aac|ogg|opus|wav)(\?|$)/i.test(item.enclosure?.url ?? ""),
+  ).length;
+  return items.length > 0 && audio * 2 >= items.length ? "podcast" : "rss";
+}
+
 async function parseFeedBody(
   feedUrl: string,
   body: string,
@@ -74,6 +99,7 @@ async function parseFeedBody(
       feedUrl,
       title: feed.title?.trim() || host,
       siteUrl: safeHttpUrl(feed.link),
+      kind: classifyFeed(feed, feedUrl),
       recentItems: feed.items.slice(0, 3).map((item) => ({
         title: item.title?.trim() || "(untitled)",
         url: safeHttpUrl(item.link),
@@ -184,6 +210,48 @@ async function detectYoutube(
   };
 }
 
+// Resolves an Apple Podcasts show page to the show's own RSS feed via the
+// iTunes lookup API.
+async function detectApplePodcast(
+  fetcher: Fetcher,
+  url: URL,
+): Promise<DetectResult> {
+  const idMatch = url.pathname.match(/\/id(\d+)/);
+  if (!idMatch) {
+    return {
+      ok: false,
+      tried: [url.toString()],
+      message:
+        "Could not find a show id in this Apple Podcasts URL. Use the show page URL of the form podcasts.apple.com/…/id123456.",
+    };
+  }
+
+  const lookupUrl = `https://itunes.apple.com/lookup?id=${idMatch[1]}`;
+  const tried = [lookupUrl];
+  let feedUrl: string | null = null;
+  try {
+    const response = await fetchWithTimeout(fetcher, lookupUrl);
+    if (response.ok) {
+      const data = (await response.json()) as {
+        results?: { feedUrl?: string }[];
+      };
+      feedUrl = safeHttpUrl(data.results?.[0]?.feedUrl);
+    }
+  } catch {
+    // Fall through to the failure result.
+  }
+  if (feedUrl) {
+    tried.push(feedUrl);
+    const feed = await tryFeedUrl(fetcher, feedUrl);
+    if (feed) return { ok: true, feed };
+  }
+  return {
+    ok: false,
+    tried,
+    message: "The podcast feed for this Apple Podcasts show could not be fetched.",
+  };
+}
+
 async function detectReddit(
   fetcher: Fetcher,
   url: URL,
@@ -224,6 +292,9 @@ export async function detectFeed(
   }
   if (/(^|\.)reddit\.com$/.test(host) && /^\/r\/[^/]+/.test(url.pathname)) {
     return detectReddit(fetcher, url);
+  }
+  if (host === "podcasts.apple.com" || host === "itunes.apple.com") {
+    return detectApplePodcast(fetcher, url);
   }
 
   const tried: string[] = [url.toString()];

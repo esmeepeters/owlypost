@@ -61,6 +61,7 @@ async function main() {
           title: source.title,
           site_url: source.siteUrl,
           feed_url: source.feedUrl,
+          type: "rss",
           category_id: category.id,
         });
         console.log(`  + ${source.title}`);

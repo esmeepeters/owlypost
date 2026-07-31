@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Category, Source } from "@/lib/types";
+import { TypeBadge } from "@/components/type-badge";
 
 const STATUS_STYLES: Record<Source["status"], string> = {
   active: "bg-green-50 text-green-700 border-green-200",
@@ -91,6 +92,7 @@ export function SourceRow({
         ))}
         <option value="">Uncategorized</option>
       </select>
+      <TypeBadge type={source.type} />
       <span
         className={`rounded border px-1.5 py-0.5 text-xs ${STATUS_STYLES[source.status]}`}
       >

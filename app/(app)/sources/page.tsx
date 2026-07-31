@@ -59,8 +59,8 @@ export default async function SourcesPage() {
 
       {sourceList.length === 0 && (
         <p className="mt-8 text-neutral-600">
-          No sources yet. Paste a URL above — a Substack, news site, blog or
-          YouTube channel — and Owly Post finds its feed.
+          No sources yet. Paste a URL above — a Substack, news site, blog,
+          YouTube channel or podcast — and Owly Post finds its feed.
         </p>
       )}
 

@@ -1,4 +1,4 @@
-import type { Verdict } from "../types.ts";
+import type { SourceType, Verdict } from "../types.ts";
 
 export type EmailProviderName = "resend" | "smtp";
 
@@ -20,6 +20,7 @@ export type EmailDigestItem = {
   title: string;
   url: string | null;
   sourceTitle: string;
+  sourceType: SourceType;
   verdict: Verdict;
   reason: string;
 };

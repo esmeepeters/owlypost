@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { getStorage } from "@/lib/storage";
 import { InboxFilters } from "@/components/inbox-filters";
+import { MediaPlayer } from "@/components/media-player";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,32 @@ export default async function InboxPage({
                 {item.sources.title} ·{" "}
                 {formatDistanceToNow(new Date(time), { addSuffix: true })}
               </p>
+              {item.sources.type === "youtube" && item.external_id && (
+                <div className="mt-2">
+                  <MediaPlayer
+                    type="youtube"
+                    title={item.title}
+                    externalId={item.external_id}
+                    mediaUrl={null}
+                    mediaType={null}
+                    thumbnailUrl={item.thumbnail_url}
+                    durationSeconds={item.duration_seconds}
+                  />
+                </div>
+              )}
+              {item.sources.type === "podcast" && item.media_url && (
+                <div className="mt-2">
+                  <MediaPlayer
+                    type="podcast"
+                    title={item.title}
+                    externalId={null}
+                    mediaUrl={item.media_url}
+                    mediaType={item.media_type}
+                    thumbnailUrl={item.thumbnail_url}
+                    durationSeconds={item.duration_seconds}
+                  />
+                </div>
+              )}
               {item.summary && (
                 <p className="mt-1.5 text-sm text-neutral-700">
                   {item.summary}

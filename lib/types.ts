@@ -2,6 +2,7 @@
 // small and there is no generated-types pipeline.
 
 export type SourceStatus = "active" | "paused" | "error";
+export type SourceType = "rss" | "youtube" | "podcast" | "reddit";
 export type DigestStatus = "draft" | "ready" | "sent" | "failed" | "empty";
 export type Verdict = "must_read" | "worth_it" | "skip";
 export type Rating = "up" | "down";
@@ -19,6 +20,7 @@ export type Source = {
   title: string;
   site_url: string | null;
   feed_url: string;
+  type: SourceType;
   status: SourceStatus;
   etag: string | null;
   last_modified: string | null;
@@ -39,6 +41,11 @@ export type Item = {
   content_text: string | null;
   summary: string | null;
   topics: string[] | null;
+  media_url: string | null;
+  media_type: string | null;
+  duration_seconds: number | null;
+  thumbnail_url: string | null;
+  external_id: string | null;
   published_at: string | null;
   fetched_at: string;
 };

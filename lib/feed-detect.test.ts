@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { detectFeed, extractFeedLinks, type Fetcher } from "./feed-detect.ts";
+import {
+  classifyFeed,
+  detectFeed,
+  extractFeedLinks,
+  type Fetcher,
+} from "./feed-detect.ts";
 
 const RSS_BODY = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -53,6 +58,7 @@ test("detects a direct feed URL by content type", async () => {
   assert.ok(result.ok);
   assert.equal(result.feed.title, "Example Feed");
   assert.equal(result.feed.feedUrl, "https://example.com/feed.xml");
+  assert.equal(result.feed.kind, "rss");
   assert.equal(result.feed.recentItems.length, 3);
   assert.equal(result.feed.recentItems[0].title, "First post");
 });
@@ -125,6 +131,7 @@ test("builds the YouTube feed directly from a /channel/ URL", async () => {
   );
   assert.ok(result.ok);
   assert.equal(result.feed.feedUrl, feedUrl);
+  assert.equal(result.feed.kind, "youtube");
   // The channel page itself is never fetched.
   assert.deepEqual(fetcher.requested, [feedUrl]);
 });
@@ -161,6 +168,120 @@ test("appends .rss for subreddit URLs", async () => {
     result.feed.feedUrl,
     "https://www.reddit.com/r/selfhosted.rss",
   );
+  assert.equal(result.feed.kind, "reddit");
+});
+
+const PODCAST_BODY = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Example Podcast</title>
+    <link>https://pod.example.com</link>
+    <itunes:image href="https://pod.example.com/cover.jpg"/>
+    <item>
+      <title>Episode 2</title>
+      <link>https://pod.example.com/2</link>
+      <enclosure url="https://cdn.example.com/2.mp3" length="1" type="audio/mpeg"/>
+    </item>
+    <item>
+      <title>Episode 1</title>
+      <link>https://pod.example.com/1</link>
+      <enclosure url="https://cdn.example.com/1.mp3" length="1" type="audio/mpeg"/>
+    </item>
+  </channel>
+</rss>`;
+
+test("classifyFeed goes by URL host for YouTube and Reddit", () => {
+  const feed = { items: [] };
+  assert.equal(
+    classifyFeed(feed, "https://www.youtube.com/feeds/videos.xml?channel_id=x"),
+    "youtube",
+  );
+  assert.equal(
+    classifyFeed(feed, "https://www.reddit.com/r/selfhosted.rss"),
+    "reddit",
+  );
+});
+
+test("classifyFeed calls a majority of audio enclosures a podcast", () => {
+  const audio = { enclosure: { url: "https://c.example/e.mp3", type: "audio/mpeg" } };
+  const plain = {};
+  assert.equal(
+    classifyFeed({ items: [audio, audio, plain] }, "https://pod.example.com/feed"),
+    "podcast",
+  );
+  assert.equal(
+    classifyFeed({ items: [audio, plain, plain] }, "https://pod.example.com/feed"),
+    "rss",
+  );
+});
+
+test("classifyFeed recognizes audio by file extension when type is missing", () => {
+  const feed = { items: [{ enclosure: { url: "https://c.example/e.m4a?x=1" } }] };
+  assert.equal(classifyFeed(feed, "https://pod.example.com/feed"), "podcast");
+});
+
+test("classifyFeed treats non-audio enclosures and empty feeds as rss", () => {
+  const video = { enclosure: { url: "https://c.example/v.mp4", type: "video/mp4" } };
+  assert.equal(classifyFeed({ items: [video] }, "https://a.example/feed"), "rss");
+  assert.equal(classifyFeed({ items: [] }, "https://a.example/feed"), "rss");
+});
+
+test("detects a podcast feed and reports its kind", async () => {
+  const fetcher = fakeFetcher({
+    "https://pod.example.com/feed": {
+      body: PODCAST_BODY,
+      contentType: "application/rss+xml",
+    },
+  });
+  const result = await detectFeed("https://pod.example.com/feed", fetcher);
+  assert.ok(result.ok);
+  assert.equal(result.feed.kind, "podcast");
+});
+
+test("resolves an Apple Podcasts show page via the iTunes lookup API", async () => {
+  const fetcher = fakeFetcher({
+    "https://itunes.apple.com/lookup?id=123456": {
+      body: JSON.stringify({
+        results: [{ feedUrl: "https://pod.example.com/feed" }],
+      }),
+      contentType: "application/json",
+    },
+    "https://pod.example.com/feed": {
+      body: PODCAST_BODY,
+      contentType: "application/rss+xml",
+    },
+  });
+  const result = await detectFeed(
+    "https://podcasts.apple.com/us/podcast/example/id123456",
+    fetcher,
+  );
+  assert.ok(result.ok);
+  assert.equal(result.feed.feedUrl, "https://pod.example.com/feed");
+  assert.equal(result.feed.kind, "podcast");
+});
+
+test("rejects an Apple Podcasts URL without a show id", async () => {
+  const result = await detectFeed(
+    "https://podcasts.apple.com/us/browse",
+    fakeFetcher({}),
+  );
+  assert.ok(!result.ok);
+  assert.match(result.message, /show id/i);
+});
+
+test("reports failure when the iTunes lookup has no feed", async () => {
+  const fetcher = fakeFetcher({
+    "https://itunes.apple.com/lookup?id=999": {
+      body: JSON.stringify({ results: [] }),
+      contentType: "application/json",
+    },
+  });
+  const result = await detectFeed(
+    "https://podcasts.apple.com/us/podcast/gone/id999",
+    fetcher,
+  );
+  assert.ok(!result.ok);
+  assert.ok(result.tried.includes("https://itunes.apple.com/lookup?id=999"));
 });
 
 test("returns a structured error listing every URL tried", async () => {

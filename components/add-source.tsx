@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Category } from "@/lib/types";
 import type { DetectedFeed, DetectResult } from "@/lib/feed-detect";
+import { TypeBadge } from "@/components/type-badge";
 
 const NEW_CATEGORY = "__new__";
 
@@ -57,6 +58,7 @@ export function AddSource({ categories }: { categories: Category[] }) {
           title: preview.title,
           feedUrl: preview.feedUrl,
           siteUrl: preview.siteUrl,
+          type: preview.kind,
           ...(categoryChoice === NEW_CATEGORY
             ? { newCategoryName: newCategory }
             : { categoryId: categoryChoice }),
@@ -85,7 +87,7 @@ export function AddSource({ categories }: { categories: Category[] }) {
           type="text"
           value={url}
           onChange={(event) => setUrl(event.target.value)}
-          placeholder="Paste any URL — newsletter, blog, news site, YouTube channel"
+          placeholder="Paste any URL — newsletter, blog, YouTube channel, podcast"
           required
           className="flex-1 rounded border border-neutral-300 px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
@@ -118,7 +120,9 @@ export function AddSource({ categories }: { categories: Category[] }) {
 
       {preview && (
         <div className="mt-4 border-t border-neutral-100 pt-4">
-          <p className="font-medium">{preview.title}</p>
+          <p className="flex items-center gap-2 font-medium">
+            {preview.title} <TypeBadge type={preview.kind} />
+          </p>
           <p className="break-all text-sm text-neutral-500">
             {preview.feedUrl}
           </p>

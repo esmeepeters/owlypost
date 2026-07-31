@@ -3,7 +3,8 @@ import Parser from "rss-parser";
 import { z } from "zod";
 import { getLlm } from "./llm/index.ts";
 import { USER_AGENT, assertPublicUrl, safeFetch, safeHttpUrl } from "./net.ts";
-import type { Source } from "./types.ts";
+import { classifyFeed } from "./feed-detect.ts";
+import type { Source, SourceType } from "./types.ts";
 import type { Storage } from "./storage/index.ts";
 import type { NewItem } from "./storage/types.ts";
 
@@ -12,7 +13,7 @@ const EXTRACT_TIMEOUT_MS = 8_000;
 const EXTRACT_THRESHOLD_CHARS = 500;
 const MAX_CONTENT_CHARS = 20_000;
 const SUMMARY_CAP_PER_RUN = 100;
-const SUMMARY_INPUT_CHARS = 12_000;
+const SUMMARY_INPUT_CHARS = 8_000;
 const FAILURES_BEFORE_ERROR = 5;
 
 export type IngestStats = {
@@ -115,12 +116,88 @@ export function stripHtml(html: string): string {
     .trim();
 }
 
-type FeedItem = Parser.Item & { contentEncoded?: string };
+// The media:* and yt:* shapes come from xml2js via rss-parser customFields:
+// child elements land as arrays, attributes under `$`. The item-level itunes
+// object is decorated by rss-parser itself.
+export type FeedItem = Parser.Item & {
+  contentEncoded?: string;
+  mediaGroup?: {
+    "media:description"?: unknown[];
+    "media:thumbnail"?: { $?: { url?: string } }[];
+  };
+  ytVideoId?: string;
+  itunes?: { duration?: string; image?: string; summary?: string };
+};
 
 function itemContent(item: FeedItem): string {
   const html = item.contentEncoded || item.content || "";
   const text = stripHtml(html);
   return text.slice(0, MAX_CONTENT_CHARS);
+}
+
+// Parses an itunes:duration value: plain seconds ("3723") or colon notation
+// ("1:02:03", "12:34").
+export function parseItunesDuration(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const parts = raw.trim().split(":");
+  if (parts.length > 3 || parts.some((part) => !/^\d+$/.test(part))) {
+    return null;
+  }
+  return parts.map(Number).reduce((total, part) => total * 60 + part, 0);
+}
+
+type MediaFields = Pick<
+  NewItem,
+  | "media_url"
+  | "media_type"
+  | "duration_seconds"
+  | "thumbnail_url"
+  | "external_id"
+> & { content_text: string };
+
+// Per-type mapping of a feed item to content and media columns. YouTube's
+// media:description is plain text; podcast show notes are HTML.
+export function mediaFields(
+  type: SourceType,
+  item: FeedItem,
+  feedImage: string | null,
+): MediaFields {
+  if (type === "youtube") {
+    const videoId = item.ytVideoId ?? null;
+    const rawDescription = item.mediaGroup?.["media:description"]?.[0];
+    const description =
+      typeof rawDescription === "string" ? rawDescription.trim() : "";
+    return {
+      media_url: null,
+      media_type: null,
+      duration_seconds: null,
+      thumbnail_url:
+        safeHttpUrl(item.mediaGroup?.["media:thumbnail"]?.[0]?.$?.url) ??
+        (videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : null),
+      external_id: videoId,
+      content_text: description.slice(0, MAX_CONTENT_CHARS),
+    };
+  }
+  if (type === "podcast") {
+    const html =
+      item.contentEncoded || item.content || item.itunes?.summary || "";
+    return {
+      media_url: safeHttpUrl(item.enclosure?.url),
+      media_type: item.enclosure?.type ?? null,
+      duration_seconds: parseItunesDuration(item.itunes?.duration),
+      thumbnail_url: safeHttpUrl(item.itunes?.image) ?? feedImage,
+      external_id: null,
+      content_text: stripHtml(html).slice(0, MAX_CONTENT_CHARS),
+    };
+  }
+  return {
+    media_url: null,
+    media_type: null,
+    duration_seconds: null,
+    thumbnail_url: null,
+    external_id: null,
+    content_text: itemContent(item),
+  };
 }
 
 function itemPublishedAt(item: FeedItem): string | null {
@@ -135,6 +212,7 @@ async function fetchFeed(source: Source): Promise<
   | {
       status: "ok";
       items: FeedItem[];
+      feedImage: string | null;
       etag: string | null;
       lastModified: string | null;
     }
@@ -156,14 +234,21 @@ async function fetchFeed(source: Source): Promise<
   }
 
   const body = await response.text();
-  const parser: Parser<unknown, FeedItem> = new Parser({
-    customFields: { item: [["content:encoded", "contentEncoded"]] },
+  const parser: Parser<{ itunes?: { image?: string } }, FeedItem> = new Parser({
+    customFields: {
+      item: [
+        ["content:encoded", "contentEncoded"],
+        ["media:group", "mediaGroup"],
+        ["yt:videoId", "ytVideoId"],
+      ],
+    },
   });
   const feed = await parser.parseString(body);
 
   return {
     status: "ok",
     items: feed.items,
+    feedImage: safeHttpUrl(feed.itunes?.image ?? feed.image?.url),
     etag: response.headers.get("etag"),
     lastModified: response.headers.get("last-modified"),
   };
@@ -207,6 +292,17 @@ async function ingestSource(
     return { notModified: true, newItems: 0 };
   }
 
+  // One-way rss -> podcast reclassification for sources added before types
+  // existed: podcasts are only recognizable from the feed body.
+  let type = source.type;
+  if (
+    type === "rss" &&
+    classifyFeed({ items: result.items }, source.feed_url) === "podcast"
+  ) {
+    type = "podcast";
+    await storage.setSourceType(source.id, type);
+  }
+
   const seen = new Set<string>();
   const rows: NewItem[] = [];
   for (const item of result.items) {
@@ -222,24 +318,27 @@ async function ingestSource(
       url_hash: urlHash(link),
       title: item.title?.trim() || "(untitled)",
       author: item.creator ?? null,
-      content_text: itemContent(item),
       published_at: itemPublishedAt(item),
+      ...mediaFields(type, item, result.feedImage),
     });
   }
 
   const inserted = await storage.upsertItems(rows);
 
   // Full-text extraction for new items with thin feed content; failures keep
-  // the feed excerpt.
-  for (const item of inserted) {
-    if (!item.url) continue;
-    if ((item.content_text?.length ?? 0) >= EXTRACT_THRESHOLD_CHARS) continue;
-    const fullText = await extractFullText(item.url);
-    if (fullText && fullText.length > (item.content_text?.length ?? 0)) {
-      await storage.updateItemContent(
-        item.id,
-        fullText.slice(0, MAX_CONTENT_CHARS),
-      );
+  // the feed excerpt. Watch and episode pages extract junk, so media sources
+  // keep the feed's own description.
+  if (type !== "youtube" && type !== "podcast") {
+    for (const item of inserted) {
+      if (!item.url) continue;
+      if ((item.content_text?.length ?? 0) >= EXTRACT_THRESHOLD_CHARS) continue;
+      const fullText = await extractFullText(item.url);
+      if (fullText && fullText.length > (item.content_text?.length ?? 0)) {
+        await storage.updateItemContent(
+          item.id,
+          fullText.slice(0, MAX_CONTENT_CHARS),
+        );
+      }
     }
   }
 
@@ -269,6 +368,15 @@ const summarySchema = z.object({
   topics: z.array(z.string()).max(3),
 });
 
+// What the summary prompt calls the item, and what its text actually is —
+// a video's content_text is its description, an episode's its show notes.
+const SUMMARY_SUBJECTS: Record<SourceType, { noun: string; basis: string }> = {
+  rss: { noun: "article", basis: "" },
+  reddit: { noun: "post", basis: "" },
+  youtube: { noun: "video", basis: " based on its description below" },
+  podcast: { noun: "podcast episode", basis: " based on its show notes below" },
+};
+
 // Summarizes items that don't have a summary yet, capped per run; the rest
 // are picked up on the next run.
 export async function summarizePendingItems(
@@ -284,8 +392,12 @@ export async function summarizePendingItems(
 
   for (const item of pending) {
     try {
+      const { noun, basis } = SUMMARY_SUBJECTS[item.source_type];
       const prompt = [
-        `Summarize this article in 4 to 7 sentences, written in the language "${language}", covering the key facts, figures, and conclusions so a reader gets the full picture without opening the article. Also list at most 3 short topic tags (in ${language === "en" ? "English" : `"${language}"`} or English, lowercase).`,
+        `Summarize this ${noun}${basis} in the language "${language}" so a reader gets the full picture without opening the ${noun}: the key facts, names, figures, dates and conclusions, in 4 to 7 sentences.`,
+        `If the content is only a stub, a teaser or a bare link, summarize just what is actually there in 1 or 2 sentences instead; never invent details.`,
+        `Style: plain, direct sentences without hype. Never use an em dash or en dash; use a comma, a colon, or two sentences instead.`,
+        `Also list at most 3 short topic tags (in ${language === "en" ? "English" : `"${language}"`} or English, lowercase).`,
         "",
         `Title: ${item.title}`,
         `Content: ${(item.content_text ?? "").slice(0, SUMMARY_INPUT_CHARS)}`,

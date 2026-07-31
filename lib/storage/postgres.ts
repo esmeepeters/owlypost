@@ -9,6 +9,7 @@ import type {
   SectionFeedback,
   Source,
   SourceStatus,
+  SourceType,
 } from "../types.ts";
 import type {
   CategoryWithCount,
@@ -80,9 +81,15 @@ export class PostgresStorage implements Storage {
 
   async insertSource(input: SourceInput): Promise<void> {
     await this.#pool.query(
-      `insert into sources (title, feed_url, site_url, category_id)
-       values ($1, $2, $3, $4)`,
-      [input.title, input.feed_url, input.site_url, input.category_id],
+      `insert into sources (title, feed_url, site_url, type, category_id)
+       values ($1, $2, $3, $4, $5)`,
+      [
+        input.title,
+        input.feed_url,
+        input.site_url,
+        input.type,
+        input.category_id,
+      ],
     );
   }
 
@@ -161,6 +168,13 @@ export class PostgresStorage implements Storage {
       `update sources set category_id = $2 where id = $1`,
       [id, categoryId],
     );
+  }
+
+  async setSourceType(id: string, type: SourceType): Promise<void> {
+    await this.#pool.query(`update sources set type = $2 where id = $1`, [
+      id,
+      type,
+    ]);
   }
 
   async deleteSource(id: string): Promise<void> {
@@ -254,6 +268,11 @@ export class PostgresStorage implements Storage {
       r.title,
       r.author,
       r.content_text,
+      r.media_url,
+      r.media_type,
+      r.duration_seconds,
+      r.thumbnail_url,
+      r.external_id,
       r.published_at,
     ]);
     // The bare ON CONFLICT lets both arbiters skip rows: the unique constraint
@@ -262,7 +281,8 @@ export class PostgresStorage implements Storage {
     // different feed.
     const { rows: inserted } = await this.#pool.query<InsertedItem>(
       `insert into items
-         (source_id, guid, url, canonical_hash, url_hash, title, author, content_text, published_at)
+         (source_id, guid, url, canonical_hash, url_hash, title, author, content_text,
+          media_url, media_type, duration_seconds, thumbnail_url, external_id, published_at)
        values ${text}
        on conflict do nothing
        returning id, url, content_text`,
@@ -280,10 +300,12 @@ export class PostgresStorage implements Storage {
 
   async listUnsummarizedItems(limit: number): Promise<PendingItem[]> {
     const { rows } = await this.#pool.query<PendingItem>(
-      `select id, title, content_text
-         from items
-        where summary is null
-        order by fetched_at desc
+      `select i.id, i.title, i.content_text, s.type as source_type
+         from items i
+         join sources s on s.id = i.source_id
+        where i.summary is null
+          and length(coalesce(i.content_text, '')) >= 80
+        order by i.fetched_at desc
         limit $1`,
       [limit],
     );
@@ -347,8 +369,10 @@ export class PostgresStorage implements Storage {
     params.push(filter.limit);
     const limitParam = `$${params.length}`;
     const { rows } = await this.#pool.query<InboxItem>(
-      `select i.id, i.title, i.url, i.summary, i.topics, i.published_at, i.fetched_at,
-              json_build_object('id', s.id, 'title', s.title, 'category_id', s.category_id) as sources
+      `select i.id, i.title, i.url, i.summary, i.topics,
+              i.media_url, i.media_type, i.duration_seconds, i.thumbnail_url, i.external_id,
+              i.published_at, i.fetched_at,
+              json_build_object('id', s.id, 'title', s.title, 'category_id', s.category_id, 'type', s.type) as sources
          from items i
          join sources s on s.id = i.source_id
         ${where.length ? `where ${where.join(" and ")}` : ""}
@@ -362,7 +386,7 @@ export class PostgresStorage implements Storage {
   async getUndigestedItems(range: ItemRange): Promise<DigestCandidate[]> {
     const { rows } = await this.#pool.query<DigestCandidate>(
       `select i.id, i.title, i.url, i.summary, i.topics, i.published_at, i.fetched_at, i.source_id,
-              json_build_object('title', s.title, 'category_id', s.category_id) as sources
+              json_build_object('title', s.title, 'category_id', s.category_id, 'type', s.type) as sources
          from items i
          join sources s on s.id = i.source_id
         where coalesce(i.published_at, i.fetched_at) >= $1

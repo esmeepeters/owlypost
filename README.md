@@ -19,7 +19,7 @@
 
 Owly Post is a self-hosted, open source **personal content radar and weekly
 digest**. Add your sources — Substacks, news sites, blogs, YouTube channels,
-anything with a feed — and Owly quietly collects every new item. Once a week
+podcasts, anything with a feed — and Owly quietly collects every new item. Once a week
 it writes you **one opinionated editorial newsletter** that summarizes the
 week and gives every item a verdict: _must read_, _worth it_, or _skip_.
 
@@ -43,7 +43,11 @@ read one good newsletter than scroll endlessly.
 
 - **📥 Paste any URL** — automatic feed detection covers direct RSS/Atom
   feeds, `<link rel="alternate">` discovery, well-known feed paths (which
-  covers every Substack), YouTube channels and handles, and subreddits.
+  covers every Substack), YouTube channels and handles, podcasts (including
+  Apple Podcasts links), and subreddits.
+- **▶️ Videos and podcasts play in place** — YouTube videos and podcast
+  episodes show a thumbnail in the inbox and play right there: an embedded
+  player for videos, an audio player for episodes.
 - **🗂️ Sources by category** — with pause, resume, delete, and clear error
   states.
 - **⏱️ Ingestion every 6 hours** — conditional GETs, deduplication,
