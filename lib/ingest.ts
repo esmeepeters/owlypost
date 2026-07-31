@@ -15,6 +15,7 @@ const MAX_CONTENT_CHARS = 20_000;
 const SUMMARY_CAP_PER_RUN = 100;
 const SUMMARY_INPUT_CHARS = 8_000;
 const FAILURES_BEFORE_ERROR = 5;
+const ERROR_RETRY_AFTER_MS = 24 * 60 * 60 * 1000;
 
 export type IngestStats = {
   sources: number;
@@ -350,6 +351,18 @@ async function ingestSource(
   return { notModified: false, newItems: inserted.length };
 }
 
+// Error sources are not dead: they get one retry a day. last_fetched_at
+// records the last attempt (markSourceFailure bumps it too), so a broken feed
+// costs one request per day instead of one per run.
+export function isErrorRetryDue(
+  source: Pick<Source, "last_fetched_at">,
+  now: Date,
+): boolean {
+  if (!source.last_fetched_at) return true;
+  const last = Date.parse(source.last_fetched_at);
+  return Number.isNaN(last) || now.getTime() - last >= ERROR_RETRY_AFTER_MS;
+}
+
 async function recordFailure(
   storage: Storage,
   source: Source,
@@ -424,7 +437,11 @@ export async function summarizePendingItems(
 }
 
 export async function runIngest(storage: Storage): Promise<IngestStats> {
-  const sources = await storage.listActiveSources();
+  const now = new Date();
+  const retrying = (await storage.listErrorSources()).filter((source) =>
+    isErrorRetryDue(source, now),
+  );
+  const sources = [...(await storage.listActiveSources()), ...retrying];
 
   const stats: IngestStats = {
     sources: sources.length,
@@ -438,6 +455,11 @@ export async function runIngest(storage: Storage): Promise<IngestStats> {
   for (const source of sources) {
     try {
       const result = await ingestSource(storage, source);
+      if (source.status === "error") {
+        // The fetch succeeded, so the error state is over; failure counters
+        // were already reset by markSourceFetched/markSourceNotModified.
+        await storage.setSourceStatus(source.id, "active", false);
+      }
       if (result.notModified) {
         stats.notModified++;
       } else {

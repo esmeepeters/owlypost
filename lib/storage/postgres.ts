@@ -123,17 +123,21 @@ export class PostgresStorage implements Storage {
       status?: SourceStatus;
     },
   ): Promise<void> {
+    // last_fetched_at is the last attempt, not the last success: the daily
+    // retry of error sources (isErrorRetryDue) is timed against it.
     if (fields.status) {
       await this.#pool.query(
         `update sources
-           set last_error = $2, consecutive_failures = $3, status = $4
+           set last_error = $2, consecutive_failures = $3, status = $4,
+               last_fetched_at = now()
          where id = $1`,
         [id, fields.last_error, fields.consecutive_failures, fields.status],
       );
     } else {
       await this.#pool.query(
         `update sources
-           set last_error = $2, consecutive_failures = $3
+           set last_error = $2, consecutive_failures = $3,
+               last_fetched_at = now()
          where id = $1`,
         [id, fields.last_error, fields.consecutive_failures],
       );

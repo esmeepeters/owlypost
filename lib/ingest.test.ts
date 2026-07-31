@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   canonicalHash,
+  isErrorRetryDue,
   mediaFields,
   normalizeUrl,
   parseItunesDuration,
@@ -195,4 +196,22 @@ test("mediaFields leaves plain rss items without media", () => {
   assert.equal(fields.media_url, null);
   assert.equal(fields.thumbnail_url, null);
   assert.equal(fields.external_id, null);
+});
+
+test("isErrorRetryDue waits a day after the last attempt", () => {
+  const now = new Date("2026-07-31T12:00:00Z");
+  assert.equal(
+    isErrorRetryDue({ last_fetched_at: "2026-07-30T11:00:00Z" }, now),
+    true,
+  );
+  assert.equal(
+    isErrorRetryDue({ last_fetched_at: "2026-07-30T13:00:00Z" }, now),
+    false,
+  );
+});
+
+test("isErrorRetryDue treats missing or unparsable timestamps as due", () => {
+  const now = new Date("2026-07-31T12:00:00Z");
+  assert.equal(isErrorRetryDue({ last_fetched_at: null }, now), true);
+  assert.equal(isErrorRetryDue({ last_fetched_at: "not a date" }, now), true);
 });
