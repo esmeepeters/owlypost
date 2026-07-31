@@ -174,7 +174,7 @@ function truncate(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
 
-function buildPrompt(options: {
+export function buildPrompt(options: {
   language: string;
   weekStart: string;
   weekEnd: string;
@@ -201,11 +201,10 @@ function buildPrompt(options: {
   } = options;
 
   const system = [
-    `You are the editor of a personal weekly reading digest: sharp, opinionated, allergic to hype, and focused on saving your reader time.`,
+    `You are the editor of a personal reading digest for a single reader you know well: sharp, opinionated, allergic to hype, and focused on saving your reader time.`,
     `You write in the language with code "${language}".`,
-    `Each category summary is a self-contained mini-newsletter: after reading it alone, the reader is fully up to date on that category without opening a single item.`,
-    `You know the reader well; their preference profile and recent feedback are provided.`,
-    `Verdicts: "must_read" is rare and precious, "worth_it" is solid, "skip" is honest. Be decisive.`,
+    `Everything you produce is tailored to this reader: their preference profile and recent feedback are provided, and your verdicts and prose follow them.`,
+    `Verdicts are recommendations for this reader, not general quality marks: "must_read" is rare and reserved for items squarely in their interests, "worth_it" is solid, "skip" is honest, even for a well-made item outside those interests. Be decisive.`,
   ].join(" ");
 
   const lines: string[] = [];
@@ -251,6 +250,7 @@ function buildPrompt(options: {
       const record = JSON.stringify({
         item_id: item.id,
         source: item.sources.title,
+        type: item.sources.type,
         title: item.title,
         url: item.url,
         summary: item.summary,
@@ -262,14 +262,32 @@ function buildPrompt(options: {
   lines.push("");
   lines.push(
     [
-      "Write the weekly digest as JSON matching exactly this shape:",
+      "How to write each section's narrative_md:",
+      `- It fully replaces the items: report the concrete facts, names, figures and conclusions from the item summaries, so the reader is completely up to date without opening a single item. Never say an item "covers" or "discusses" something: state what actually happened.`,
+      "- Write a newsletter, not a list: group related items into themes and connect them in flowing prose. Do not walk through the items one by one.",
+      `- The first sentence delivers the most important development itself, stated as news. Never open by announcing a theme, question or thread ("the big question this week", "the common thread", "this week revolves around"): give the substance, not a label for it.`,
+      "- Let the profile set the angle: go deep on what this reader cares about and compress what they don't; an item they should skip may get no more than a clause.",
+      "- Write only about the content of the items. Never comment on the week itself (volume, pace, how thin or busy it was), on the number of items, or on the selection process; open directly with the substance.",
+      "- Length follows substance: roughly 40-60 words per item, at most ~500 words per section. One or two items need only a short paragraph; never pad.",
+      "",
+      "Style rules for all prose (narrative_md and reason):",
+      "- Plain, direct sentences. No hype, no filler.",
+      "- Never use an em dash or en dash; rewrite with a comma, a colon, or two sentences.",
+      `- Avoid formulaic constructions such as "not just X, but Y" and rhetorical questions.`,
+      "- Sparing **bold** for the few developments that matter most. No markdown links: the item list below each summary carries them.",
+      "",
+      "Verdicts:",
+      "- Judge every item against the reader profile and the feedback above, not against general newsworthiness.",
+      "- reason is one sentence of at most 15 words telling this reader why it deserves their time, or why not.",
+      "",
+      "Respond with JSON matching exactly this shape:",
       `{`,
       `  "sections": [`,
       `    {`,
       `      "category": "category name",`,
-      `      "narrative_md": "the category's newsletter text in markdown. Inform, never tease: state what actually happened — the concrete facts, figures and conclusions from the item summaries — so the reader is fully up to date without opening anything; never write 'X covers Y' without giving the substance. Flowing prose that groups related items into mini-themes rather than walking through items one by one, with sparing **bold** for the most important developments. No markdown links — the item list below the summary carries them. Write only about the content of the items — never comment on the week itself (volume, pace, how thin or busy it was), on the number of items, or on the digest/selection process; open directly with the substance. Length is proportional to substance: roughly 40-60 words per item, at most ~500 words per category; one or two items need only a short paragraph",`,
+      `      "narrative_md": "the section's newsletter text in markdown",`,
       `      "items": [`,
-      `        { "item_id": "uuid", "verdict": "must_read | worth_it | skip", "reason": "one sentence" }`,
+      `        { "item_id": "uuid", "verdict": "must_read | worth_it | skip", "reason": "one sentence, max 15 words" }`,
       `      ]`,
       `    }`,
       `  ]`,
@@ -277,7 +295,6 @@ function buildPrompt(options: {
       "",
       "Every item_id from the list above must appear exactly once across all sections.",
       "Use the category names as given. All prose in the digest language.",
-      "Match length to substance: with few items, keep the digest short rather than padding it — and never remark on the low volume.",
     ].join("\n"),
   );
 
@@ -449,6 +466,7 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
                 title: item.title,
                 url: item.url,
                 sourceTitle: item.sources.title,
+                sourceType: item.sources.type,
                 verdict: entry.verdict,
                 reason: entry.reason,
               },
