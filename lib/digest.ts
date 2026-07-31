@@ -13,6 +13,11 @@ const ITEM_CAP = 300;
 // Undigested items older than this never enter a digest, so a newly added
 // source with years of archives cannot flood the first digest after it.
 const MAX_ITEM_AGE_DAYS = 30;
+// Reach-back before the previous digest's run time. Items published shortly
+// before that digest but fetched after it (ingest runs on its own schedule)
+// still make the next one; the digest_items anti-join keeps the overlap from
+// duplicating anything.
+const PREVIOUS_DIGEST_OVERLAP_HOURS = 48;
 const ITEM_RECORD_MAX_CHARS = 1500;
 const FEEDBACK_IN_PROMPT = 30;
 const SECTION_FEEDBACK_IN_PROMPT = 10;
@@ -53,13 +58,26 @@ export function digestWindow(
   };
 }
 
-// The range digest candidates must fall in: everything up to now, at most
-// maxAgeDays old. The upper bound keeps future-dated published_at out.
-export function eligibilityRange(now: Date, maxAgeDays = MAX_ITEM_AGE_DAYS) {
+// The range digest candidates must fall in: everything up to now, reaching
+// back to the previous completed digest (plus overlap) but never further than
+// maxAgeDays. Without a previous digest the full maxAgeDays applies — the
+// first digest deliberately presents the feeds' recent history. The upper
+// bound keeps future-dated published_at out.
+export function eligibilityRange(
+  now: Date,
+  previousDigestAt: Date | null = null,
+  maxAgeDays = MAX_ITEM_AGE_DAYS,
+) {
+  const oldest = now.getTime() - maxAgeDays * 24 * 60 * 60 * 1000;
+  const since = previousDigestAt
+    ? Math.max(
+        oldest,
+        previousDigestAt.getTime() -
+          PREVIOUS_DIGEST_OVERLAP_HOURS * 60 * 60 * 1000,
+      )
+    : oldest;
   return {
-    sinceUtc: new Date(
-      now.getTime() - maxAgeDays * 24 * 60 * 60 * 1000,
-    ).toISOString(),
+    sinceUtc: new Date(since).toISOString(),
     untilUtc: now.toISOString(),
   };
 }
@@ -317,10 +335,18 @@ export async function runDigest(storage: Storage): Promise<DigestRunResult> {
   const { weekStart, weekEnd } = digestWindow(now, timeZone, frequency);
 
   // 1. Collect everything not yet included in a digest (by published_at,
-  // falling back to fetched_at), capped in age. Membership in digest_items is
-  // only recorded on a successful run, so a failed run leaves its items
-  // eligible for the next one, and a re-run after success finds nothing.
-  const allItems = await storage.getUndigestedItems(eligibilityRange(now));
+  // falling back to fetched_at), reaching back to the previous completed
+  // digest so a catch-up burst or re-added source cannot dump weeks of
+  // backlog into one digest. Membership in digest_items is only recorded on a
+  // successful run, so a failed run leaves its items eligible for the next
+  // one, and a re-run after success finds nothing.
+  const previousDigest = await storage.getLatestCompletedDigest();
+  const allItems = await storage.getUndigestedItems(
+    eligibilityRange(
+      now,
+      previousDigest ? new Date(previousDigest.created_at) : null,
+    ),
+  );
 
   // 2. Nothing new: store an empty digest and stop — no email for these.
   if (allItems.length === 0) {

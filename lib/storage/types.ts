@@ -227,6 +227,10 @@ export interface Storage {
   updateDigestStatus(id: string, status: DigestStatus): Promise<void>;
   listDigests(): Promise<Digest[]>;
   getLatestDigest(): Promise<Digest | null>;
+  // The most recent digest that ran to completion (any status except failed).
+  // Its created_at bounds the next digest's eligibility window: a failed run
+  // must not advance the window, so its items stay eligible.
+  getLatestCompletedDigest(): Promise<Digest | null>;
   getDigest(id: string): Promise<Digest | null>;
   // Retention: clears the raw model response kept for failed digests created
   // before the cutoff; returns the number of digests affected.

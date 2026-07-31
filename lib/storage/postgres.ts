@@ -466,6 +466,14 @@ export class PostgresStorage implements Storage {
     return rows[0] ?? null;
   }
 
+  async getLatestCompletedDigest(): Promise<Digest | null> {
+    const { rows } = await this.#pool.query<Digest>(
+      `select * from digests where status <> 'failed'
+        order by created_at desc limit 1`,
+    );
+    return rows[0] ?? null;
+  }
+
   async getDigest(id: string): Promise<Digest | null> {
     const { rows } = await this.#pool.query<Digest>(
       `select * from digests where id = $1`,

@@ -57,8 +57,23 @@ test("eligibilityRange spans the default 30 days up to now", () => {
 
 test("eligibilityRange respects a custom max age", () => {
   const now = new Date("2026-07-01T12:00:00Z");
-  const { sinceUtc } = eligibilityRange(now, 7);
+  const { sinceUtc } = eligibilityRange(now, null, 7);
   assert.equal(sinceUtc, "2026-06-24T12:00:00.000Z");
+});
+
+test("eligibilityRange starts 48h before the previous digest", () => {
+  const now = new Date("2026-07-31T08:00:00Z");
+  const previous = new Date("2026-07-26T19:00:00Z");
+  const { sinceUtc, untilUtc } = eligibilityRange(now, previous);
+  assert.equal(sinceUtc, "2026-07-24T19:00:00.000Z");
+  assert.equal(untilUtc, "2026-07-31T08:00:00.000Z");
+});
+
+test("eligibilityRange never reaches beyond the max age", () => {
+  const now = new Date("2026-07-31T08:00:00Z");
+  const ancient = new Date("2026-01-01T00:00:00Z");
+  const { sinceUtc } = eligibilityRange(now, ancient);
+  assert.equal(sinceUtc, "2026-07-01T08:00:00.000Z");
 });
 
 function makeItems(sourceCounts: Record<string, number>) {
